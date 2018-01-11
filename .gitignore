@@ -1,0 +1,8 @@
+*.pyc
+*.npy
+*.dat
+*.json
+*.incon
+*.png
+*.csv
+*.xyz
