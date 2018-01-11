@@ -198,15 +198,15 @@ class CM(object):
             block_ij_list = [] # (coli, layj)
             if geo.num_layers > 0:
                 if geo.atmosphere_type  ==  0: # one atmosphere block
-                    bn = geo.block_name(geo.layerlist[0].name, geo.atmosphere_column_name)
+                    # bn = geo.block_name(geo.layerlist[0].name, geo.atmosphere_column_name)
                     block_ij_list.append((None, None))
                 elif geo.atmosphere_type == 1: # one atmosphere block per column
                     for i,col in enumerate(geo.columnlist):
-                        bn = geo.block_name(geo.layerlist[0].name, col.name)
+                        # bn = geo.block_name(geo.layerlist[0].name, col.name)
                         block_ij_list.append((i, None))
                 for j,lay in enumerate(geo.layerlist[1:]):
                     for i,col in [(ii,col) for ii,col in enumerate(geo.columnlist) if col.surface > lay.bottom]:
-                        bn = geo.block_name(lay.name, col.name)
+                        # bn = geo.block_name(lay.name, col.name)
                         block_ij_list.append((i, j+1))
             return block_ij_list
 
