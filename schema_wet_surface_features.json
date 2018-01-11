@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "type": "object",
+    "properties":{
+        "comments": {
+            "type": "array", 
+            "items": {"type": "string"}
+        },
+        "features": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "file": {"type": "string"},
+                    "threshold": {"type": "number"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["lake", "river"]
+                    },
+                    "fit_min": {"type", "boolean"},
+                    "snap_down": {"type", "boolean"}
+                }
+            }
+        }
+    }
+}
