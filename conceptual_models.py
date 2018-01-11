@@ -1,9 +1,13 @@
 from mulgrids import *
 from t2data import *
 
+# for blocky CM
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
 from rtree import index
+
+# for faults CM
+from geom_3dface_utils import Face3D
 
 import json
 import time
@@ -243,7 +247,103 @@ class CM(object):
         print_wall_time('  Finished calculating/filling stats', loop_stop=True)
         return stats, self.zones
 
-if __name__ == '__main__':
+class CM_Faults(object):
+    """ Conceptual Model of faults as 3D surface (Face3D *.ts objects)
+
+    NOTE this simplements the simple way of getting blocks crossed by faults.
+    Instead of 3D Face cutting across 3D blocks/elements, I simply let 3D Face
+    cuts across layer centre plane.
+    """
+    def __init__(self, faults=None):
+        import os.path
+        super(CM_Faults, self).__init__()
+        self.zones = []
+        self.fault = {}
+        if faults is None:
+            pass
+        elif isinstance(faults, list):
+            # a list of *.ts files to load
+            for filename in faults:
+                fault = Face3D()
+                fault.read(filename)
+                zonename = os.path.splitext(filename)[0]
+                self.zones.append(zonename)
+                self.fault[zonename] = fault
+        elif isinstance(faults, dict):
+            # dictionary of Face3D objects
+            for zonename in sorted(faults.keys()):
+                self.zones.append(zonename)
+                self.fault = faults
+        else:
+            raise Exception
+        self.num_zones = len(self.zones)
+
+    def populate_model(self, geo):
+
+        def column_polygons(geo):
+            # CM usually has larger number of columns and is regular, so I should
+            # probably do RTree on CM grid
+            column_idx = index.Index()
+            column_polys = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
+            print_wall_time('    constructed all %i column polygons' % geo.num_columns, loop_stop=True)
+            for i,poly in enumerate(column_polys):
+                column_idx.insert(i, poly.bounds)
+            print_wall_time('    constructed column polygons RTree', loop_stop=True)
+            return column_polys, column_idx
+
+        def setup_block_name_index_fast(geo):
+            """ based on mulgrid.setup_block_name_index()
+
+            Note atmosphere blocks may not have proper column or layer index,
+            None would be used in place.
+            """
+            block_ij_idx = {} # { (coli, layj): block index }
+            bi = 0
+            if geo.num_layers > 0:
+                if geo.atmosphere_type  ==  0: # one atmosphere block
+                    # bn = geo.block_name(geo.layerlist[0].name, geo.atmosphere_column_name)
+                    block_ij_idx[(None, None)] = bi
+                    bi += 1
+                elif geo.atmosphere_type == 1: # one atmosphere block per column
+                    for i,col in enumerate(geo.columnlist):
+                        # bn = geo.block_name(geo.layerlist[0].name, col.name)
+                        block_ij_idx[(i, None)] = bi
+                        bi += 1
+                for j,lay in enumerate(geo.layerlist[1:]):
+                    for i,col in [(ii,col) for ii,col in enumerate(geo.columnlist) if col.surface > lay.bottom]:
+                        # bn = geo.block_name(lay.name, col.name)
+                        block_ij_idx[(i, j+1)] = bi
+                        bi += 1
+            return block_ij_idx
+
+        stats = np.zeros((geo.num_blocks, self.num_zones), dtype=bool)
+        col_polys, col_idx = column_polygons(geo)
+        block_ij_idx = setup_block_name_index_fast(geo)
+        print_wall_time('  setup_block_name_index_fast()', loop_stop=True)
+        for jj,lay in enumerate(geo.layerlist):
+            count = 0 # intersected blocks count, per layer
+            z = lay.centre
+            for fi,fname in enumerate(self.zones):
+                fault = self.fault[fname]
+                fault.set_cutting_plane((0.0,0.0,z), (0.0,0.0,1.0))
+                pts = fault.search_line()
+                if len(pts) < 2:
+                    # not enough points to construct LineString, layer not
+                    # cutting through the fault Face
+                    print "    skipping layer %i '%s' with fault '%s'" % (jj, lay.name, fname)
+                    continue
+                line = LineString([tuple(pt[:2]) for pt in fault.search_line()])
+                for ii in col_idx.intersection(line.bounds):
+                    if line.intersection(col_polys[ii]).length > 0.0:
+                        if (ii,jj) in block_ij_idx:
+                            bi = block_ij_idx[(ii,jj)]
+                            stats[bi,fi] = True
+                            count += 1
+                            # print 'found ', geo.block_name_list[bi]
+            print_wall_time('  finished layer %i, found %i blocks' % (jj, count), loop_stop=True)
+        return stats, self.zones
+
+def test_cm_blocky_full():
     START = [time.time()]
 
     leapfrog = LeapfrogGM(geometry='gtmp_ay2017_03_6')
@@ -278,3 +378,19 @@ if __name__ == '__main__':
                     "zones": zones,
                     "stats": stats.tolist(),
                   }, f, indent=4, sort_keys=True)
+
+if __name__ == '__main__':
+    import glob
+    START = [time.time()]
+
+    bm_geo = mulgrid('gtmp_ay2017_05_5a.dat')
+    print_wall_time('loaded BM geo', loop_stop=True)
+    print '  BM has %i blocks: %s' % (bm_geo.num_blocks, bm_geo.filename)
+
+    cm_f = CM_Faults(sorted(glob.glob('*.ts')))
+    print_wall_time('loaded faults CM w/ %i faults' % cm_f.num_zones, loop_stop=True)
+
+    stats, zones = cm_f.populate_model(bm_geo)
+    print_wall_time('Finished all, total wall time:', total=True)
+
+

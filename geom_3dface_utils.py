@@ -259,7 +259,7 @@ class Face3D(object):
         line = line[::-1]
         line += self._traverse_one_way(cur_tri, other_end_ep, other_end_ep)
 
-        print 'finished, len=', len(line)
+        # print 'finished, len=', len(line)
         return line
         # print '\n'.join([('%.2f, %.2f, %.2f' % tuple(coo)) for coo in line])
 
