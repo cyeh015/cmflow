@@ -12,9 +12,6 @@ from geom_3dface_utils import Face3D
 import json
 import time
 
-import matplotlib.pyplot as plt
-from wairakei_res import draw_res, insert_res_as_wells
-
 START = [time.time()]
 def print_wall_time(msg, loop_stop=False, total=False):
     t = time.time()
@@ -230,17 +227,6 @@ class CM_Blocky(object):
                                                  self.geo.columnlist[cm_ci].name)
                         if cb not in self.block:
                             continue
-                        # print 'found something CM block %i within BM' % self.geo.block_name_index[cb]
-                        # print inter_areas[bm_ci,cm_ci], inter_lengths[bm_li,cm_li]
-                        # print bm_ci, bm_col_ccis[bm_ci]
-                        # print bm_li, bm_lay_clis[bm_li]
-
-                        # plt.clf()
-                        # geo.layer_plot(plt=plt, linecolour='b', column_names=[geo.columnlist[bm_ci].name])
-                        # self.geo.layer_plot(plt=plt, linecolour='r', column_names=[self.geo.columnlist[cm_ci].name])
-                        # draw_res(plt)
-                        # plt.show()
-
                         zi = self.block[cb]
                         # zi = self.block[self.geo.block_name_index(cb)]
                         stats[ii,zi] = stats[ii,zi] + ivol / bvol
