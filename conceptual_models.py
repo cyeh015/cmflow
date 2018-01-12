@@ -91,12 +91,12 @@ class LeapfrogGM(object):
             self.litholist = data['zones']
             self.blocklitho = data['blocks']
 
-class CM(object):
+class CM_Blocky(object):
     """ A nceptual Model object is a model that represents a space by a list of
     zones (usually exists as a blocky model, each block has a *rocktype*). """
     def __init__(self, geo, grid):
         """ initialise CM model by load mulgrid geometry and t2grid objects """
-        super(CM, self).__init__()
+        super(CM_Blocky, self).__init__()
 
         if isinstance(geo, str):
             self.geo = mulgrid(geo)
@@ -360,7 +360,7 @@ def test_cm_blocky_full():
     print '  CM has %i blocks: %s' % (geo.num_blocks, geo.filename)
     print '  BM has %i blocks: %s' % (bm_geo.num_blocks, bm_geo.filename)
 
-    cm = CM(geo, leapfrog)
+    cm = CM_Blocky(geo, leapfrog)
     stats, zones = cm.populate_model(bm_geo)
 
     print_wall_time('Finished all, total wall time:', total=True)
@@ -379,7 +379,7 @@ def test_cm_blocky_full():
                     "stats": stats.tolist(),
                   }, f, indent=4, sort_keys=True)
 
-if __name__ == '__main__':
+def test_cm_fault_full():
     import glob
     START = [time.time()]
 
@@ -393,4 +393,20 @@ if __name__ == '__main__':
     stats, zones = cm_f.populate_model(bm_geo)
     print_wall_time('Finished all, total wall time:', total=True)
 
+    save_as = '_CM_faults_results'
+    print np.nonzero(stats)
+    np.save(save_as + '.npy', stats)
+    with open(save_as + '.json', 'w') as f:
+        json.dump({
+                    "comments": [
+                        "BM geometry: " + bm_geo.filename,
+                    ],
+                    "zones": zones,
+                    "stats": stats.tolist(),
+                  }, f, indent=4, sort_keys=True)
 
+
+if __name__ == '__main__':
+    # test_cm_blocky_full()
+    # test_cm_fault_full()
+    pass
