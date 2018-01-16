@@ -11,6 +11,63 @@ def basename_from_geo_filename(geo_filename):
         basename = basename[1:]
     return basename
 
+def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
+    """
+        this copies the rocktype onto blocks in blk_names, if need new rocktype
+        names, part of the name can be preserved, the rest copied.
+        to_rocktype has to be a PyTOUGH 'rocktype' object
+    """
+    for b in blk_names:
+        r_name = ''
+        for i,c in enumerate(convention):
+            if c == '+':
+                r_name = r_name + dat.grid.block[b].rocktype.name[i]
+            else:
+                r_name = r_name + to_rocktype.name[i]
+        if r_name not in dat.grid.rocktype:
+            from copy import deepcopy
+            new_rock = deepcopy(to_rocktype)
+            new_rock.name = r_name
+
+            # THIS IS ONLY FOR EMILY AND ME, DANGEROUS!!!
+            for i,c in enumerate(convention[2:5]):
+                if c == '+':
+                    new_rock.permeability[i] = dat.grid.block[b].rocktype.permeability[i]
+
+            dat.grid.add_rocktype(new_rock)
+            print '      new rocktype added: ', new_rock.name
+            dat.grid.block[b].rocktype = new_rock
+        else:
+            dat.grid.block[b].rocktype = dat.grid.rocktype[r_name]
+
+def update_block_geology(dat, blk_name, rock_name):
+    """ only updates the block's rocktype name.  rock_name is a 5 chars string,
+    can contain '+' character to indicate preservin that part of name.  If the
+    final rocktype name does not exist in dat.grid, it will be created by
+    copying the current rocktype. """
+    def merge_name(orig, new):
+        """ both should be 5 chars long, and new can contain '+' """
+        final = ''
+        for i in range(5):
+            if new[i] <> '+':
+                final += new[i]
+            else:
+                final += orig[i]
+        return final
+
+    orig_rock_name = dat.grid.block[blk_name].rocktype.name
+    new_rock_name = merge_name(orig_rock_name, rock_name)
+
+    if new_rock_name in dat.grid.rocktype:
+        dat.grid.block[blk_name].rocktype = dat.grid.rocktype[new_rock_name]
+    else:
+        from copy import deepcopy
+        new_rock = deepcopy(dat.grid.rocktype[orig_rock_name])
+        new_rock.name = new_rock_name
+        dat.grid.add_rocktype(new_rock)
+        dat.grid.block[blk_name].rocktype = new_rock
+        print '      new rocktype added: ', new_rock_name
+
 def create_basic_t2data(geo, parameter={}, multi={}, others={}):
     dat = t2data()
     simul = 'AUTOUGH2.2'
