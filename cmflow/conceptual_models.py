@@ -288,12 +288,12 @@ class CM_Faults(object):
             if geo.num_layers > 0:
                 if geo.atmosphere_type  ==  0: # one atmosphere block
                     # bn = geo.block_name(geo.layerlist[0].name, geo.atmosphere_column_name)
-                    block_ij_idx[(None, None)] = bi
+                    block_ij_idx[(None, 0)] = bi
                     bi += 1
                 elif geo.atmosphere_type == 1: # one atmosphere block per column
                     for i,col in enumerate(geo.columnlist):
                         # bn = geo.block_name(geo.layerlist[0].name, col.name)
-                        block_ij_idx[(i, None)] = bi
+                        block_ij_idx[(i, 0)] = bi
                         bi += 1
                 for j,lay in enumerate(geo.layerlist[1:]):
                     for i,col in [(ii,col) for ii,col in enumerate(geo.columnlist) if col.surface > lay.bottom]:
