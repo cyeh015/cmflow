@@ -4,12 +4,75 @@ from t2data import t2generator
 from t2data_json import t2data_export_json as t2data
 
 import os.path
+import json
 
 def basename_from_geo_filename(geo_filename):
     basename = os.path.splitext(geo_filename)[0]
     if basename.startswith('g'):
         basename = basename[1:]
     return basename
+
+def modify_wellname(mod,original):
+    """ modifying well name according to rules: any '*' characters in mod
+    will be keep original name, otherwise overwritten by mod. """
+    newname = []
+    for i in xrange(5):
+        if mod[i] == '*':
+            newname.append(original[i])
+        else:
+            newname.append(mod[i])
+    return "".join(newname)
+
+def gaussian(pos, centre, peak, sigma):
+    """ Returns value of 2D Gaussian function:
+      f(x,y) = A exp(- ((x-x0)^2+(y-y0)^2)/(2 sigma^2))
+    pos is [x, y]; centre is [x0, y0]; peak is A; sigma is standard deviation. """
+    from math import exp, pow
+    e = (pow((pos[0]-centre[0]),2.0)+pow((pos[1]-centre[1]),2.0))/(2.0 * pow(sigma, 2.0))
+    return peak * exp(- e)
+
+def add_heat_geners(geo, dat, fconfig,
+                    newwell_label='***99', skip_if_exist='***98'):
+    """ adds HEAT geners into dat according to settings in fconfig file """
+    # heat flow unit is W/m2
+    with open(fconfig, 'r') as f:
+        data = json.load(f)
+
+    zone_cols = {}
+    for zn,zpoly in data["ZonePolygon"].iteritems():
+        if zn not in data["HeatFlux"].keys():
+            print "skip unused zone %s" % zn
+            continue
+        zone_cols[zn] = geo.columns_in_polygon(zpoly)
+
+    layername = geo.layerlist[-1].name
+    total_gx = 0.0
+    for col in geo.columnlist:
+        heatfluxs = []
+        # minimum of default value
+        for zone in data["HeatFlux"].keys():
+            if zone == "Default":
+                heatfluxs.append(data["HeatFlux"]["Default"])
+            elif zone in zone_cols:
+                if col in zone_cols[zone]:
+                    heatfluxs.append(data["HeatFlux"][zone])
+            elif zone in data["GaussianNodes"]:
+                heatfluxs.append(gaussian(
+                    col.centroid,
+                    data["GaussianNodes"][zone]['centre'],
+                    data["HeatFlux"][zone],
+                    data["GaussianNodes"][zone]['size']))
+
+        gx = col.area * max(heatfluxs)
+        total_gx = total_gx + gx
+        blockname = geo.block_name(layername, col.name)
+        wellname = modify_wellname(newwell_label, blockname)
+        gen=t2generator(name=wellname,block=blockname,type='HEAT',gx=gx)
+        # need to check if mass already exist, if does, skip adding
+        skip_well = modify_wellname(skip_if_exist, blockname)
+        if (blockname, skip_well) not in dat.generator:
+            dat.add_generator(gen)
+    return dat, total_gx
 
 def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
     """
