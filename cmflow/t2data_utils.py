@@ -5,6 +5,7 @@ from t2data_json import t2data_export_json as t2data
 
 import os.path
 import json
+import re
 
 def basename_from_geo_filename(geo_filename):
     basename = os.path.splitext(geo_filename)[0]
@@ -72,6 +73,42 @@ def add_heat_geners(geo, dat, fconfig,
         skip_well = modify_wellname(skip_if_exist, blockname)
         if (blockname, skip_well) not in dat.generator:
             dat.add_generator(gen)
+    return dat, total_gx
+
+def add_mass_geners(geo, dat, fconfig,
+                    newwell_label='***99', only_blocks=None, only_rocks=None):
+    with open(fconfig, 'r') as f:
+        data = json.load(f)
+    zone_cols = {}
+    for zn,zpoly in data["ZonePolygon"].iteritems():
+        if zn not in data["Upflow"].keys():
+            print "skip unused zone %s" % zn
+            continue
+        zpoly = [np.array(zz) for zz in zpoly]
+        zone_cols[zn] = geo.columns_in_polygon(zpoly)
+    layername = geo.layerlist[-1].name
+    total_gx = 0.0
+    for name,area in data["Upflow"].iteritems():
+        blocks = [geo.block_name(layername,col.name) for col in zone_cols[name]]
+        if only_blocks is not None:
+            pat = re.compile(only_blocks)
+            blocks = [b for b in blocks if re.match(pat, b)]
+        if only_rocks is not None:
+            pat = re.compile(only_rocks)
+            blocks = [b for b in blocks if re.match(pat, dat.grid.block[b].rocktype.name)]
+        for b in blocks:
+            ex = area["Enthalpy"]
+            if "Total" in area:
+                gx = area["Total"] / float(len(blocks))
+            elif "Flux" in area:
+                gx = col.area * area["Flux"]
+            elif "Amount" in area:
+                gx = area["Amount"]
+            else:
+                raise Exception("Options other than Total, Flux, or Amount is not suppoerted.")
+            gn = modify_wellname(newwell_label, b)
+            dat.add_generator(t2generator(name=gn, block=b, type='MASS', gx=gx, ex=ex))
+            total_gx += gx
     return dat, total_gx
 
 def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
