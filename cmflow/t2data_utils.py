@@ -223,6 +223,7 @@ def update_block_geology(dat, blk_name, rock_name):
         dat.grid.add_rocktype(new_rock)
         dat.grid.block[blk_name].rocktype = new_rock
         print '      new rocktype added: ', new_rock_name
+    return new_rock_name
 
 def create_basic_t2data(geo, parameter={}, multi={}, others={}):
     dat = t2data()
