@@ -162,7 +162,7 @@ def plot_features(geo, features, polygons=None,
             plt.gca().text(c.centre[0], c.centre[1], column_texts[c.name],
                 verticalalignment='center', color=BLACK)
 
-def process_wet_columns(geo, features, feature_columns):
+def process_wet_columns(geo, features, feature_columns, overwrite={}):
     """ snaps wet columns for waiwera and calculate the water depths
     """
     column_mins = {}
@@ -172,9 +172,16 @@ def process_wet_columns(geo, features, feature_columns):
         if feature['type'] == 'river':
             for col in cols:
                 fitted = geo.column[col].surface
+                # new_z = snap(layer_tops, fitted - feature['depth'], 'down')
+                # liq_h = fitted - new_z  # wet atm depth
+                # nb_min = fitted
                 new_z = snap(layer_tops, fitted - feature['depth'], 'down')
-                liq_h = fitted - new_z  # wet atm depth
-                nb_min = fitted
+                if col in overwrite:
+                    new_z = overwrite[col]
+                    del overwrite[col]
+                    print col, '->', new_z
+                liq_h = feature['depth']  # wet atm depth
+                nb_min = new_z
                 for nb_col in geo.column[col].neighbour:
                     if nb_col.name in column_mins:
                         column_mins[nb_col.name] = max(nb_min, column_mins[nb_col.name])
@@ -190,6 +197,10 @@ def process_wet_columns(geo, features, feature_columns):
                 while new_z >= feature['elevation']:
                     iz = layer_tops.index(new_z)
                     new_z = layer_tops[iz - 1]
+                if col in overwrite:
+                    new_z = overwrite[col]
+                    del overwrite[col]
+                    print col, '->', new_z
                 liq_h = feature['elevation'] - new_z
                 nb_min = feature['elevation']
                 for nb_col in geo.column[col].neighbour:
@@ -200,12 +211,18 @@ def process_wet_columns(geo, features, feature_columns):
                 geo.column[col].surface = new_z
                 wet_cols[col] = (liq_h, feature['name'])
     for col in geo.columnlist:
+        # we columns, adjust, need to take care of wet_cols
         if col.name in wet_cols:
             continue
-        if col.name in column_mins:
-            new_z = snap(layer_tops, col.surface, None, column_mins[col.name])
+        # dry columns
+        if col.name in overwrite:
+            new_z = overwrite[col.name]
+            print col.name, '-->', new_z
         else:
-            new_z = snap(layer_tops, col.surface, None, None, allow_outside=True)
+            if col.name in column_mins:
+                new_z = snap(layer_tops, col.surface, None, column_mins[col.name])
+            else:
+                new_z = snap(layer_tops, col.surface, None, None, allow_outside=True)
         col.surface = new_z
     return wet_cols, column_mins
 
