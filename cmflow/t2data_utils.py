@@ -111,6 +111,62 @@ def add_mass_geners(geo, dat, fconfig,
             total_gx += gx
     return dat, total_gx
 
+def enthalpy(t_or_p,ph='liq'):
+    """ Return enthalpy kJ/kg ('liq', 'vap', or 'dif') of water at specified
+        temperature (<=500.0 in degC) or pressu (>500.0 in Pa) """
+    import t2thermo
+    def enth(t,p,f):
+        d,u = f(t,p)
+        return u + p/d
+    def hlhs((t,p)):
+        return enth(t,p,t2thermo.cowat), enth(t,p,t2thermo.supst)
+    def sat_tp(t_or_p):
+        if t_or_p > 500.0:
+            return t2thermo.tsat(t_or_p), t_or_p
+        else:
+            return t_or_p, t2thermo.sat(t_or_p)
+    (hl,hs) = hlhs(sat_tp(t_or_p))
+    # xxxx
+    return {'liq': hl,'vap': hs,'dif': hs-hl}[ph]
+
+def add_rain_geners(geo, dat, config):
+    import t2thermo
+    if isinstance(config, str):
+        with open(config, 'r') as f:
+            config = json.load(f)
+
+    if 'IncludeColumnsOnly' in config and len(config['IncludeColumnsOnly']) != 0:
+        cols = config['IncludeColumnsOnly']
+    elif 'ExludeColumns' in config and len(config['ExludeColumns']) != 0:
+        cols = [c.name for c in geo.columnlist if c.name not in config['ExludeColumns']]
+    elif ('ExludeColumns' not in config or len(config['ExludeColumns']) == 0) and ('IncludeColumnsOnly' not in config or len(config['IncludeColumnsOnly']) == 0):
+        cols = [c.name for c in geo.columnlist]
+    else:
+        raise Exception('Error: Both [ExludeColumns] and [IncludeColumnsOnly] used, this is confusing.')
+
+    rain_temp = config['Rain Temperature']
+    newlabel = config['NewGenerLabel']
+    infiltration = config['Infiltration']
+    annualrain = config['AnnualRainFall mm/yr']
+    (rain_density,u) = t2thermo.cowat(rain_temp,100135.0)
+    rain_enth = enthalpy(rain_temp)
+    mmyr2kgs = rain_density/1000.0/365.25/24.0/60.0/60.0
+
+    total_rain = 0.0
+    for c in cols:
+        col = geo.column[c]
+        layername = geo.layerlist[geo.num_layers-col.num_layers].name
+        blockname = geo.block_name(layername, col.name)
+        genname = modify_wellname(newlabel, blockname)
+
+        rain = col.area * annualrain * infiltration * mmyr2kgs
+        total_rain = total_rain + rain
+
+        gen=t2generator(name=genname, block=blockname, type='MASS',
+                        gx=rain, ex=rain_enth)
+        dat.add_generator(gen)
+    return dat, total_rain
+
 def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
     """
         this copies the rocktype onto blocks in blk_names, if need new rocktype
