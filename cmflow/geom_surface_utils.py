@@ -25,6 +25,26 @@ def load_feature(filename):
             }
             return g, meta
 
+def geo_column_polygon(geo, col_name='', cache_shapely=True):
+    """ Returns a shapely Polygon object of the column specified by name.
+
+    If col_name is specified (str) then a single polygon will be returned,
+    otherwise a list of (all columns') polygons will be returned. If
+    cache_shapely is True, it will attempt to use the cached Polygon within geo.
+    """
+    if cache_shapely:
+        if hasattr(geo, '_column_polygons_'):
+            c_polygons = geo._column_polygons_
+        else:
+            c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
+            geo._column_polygons_ = c_polygons
+    else:
+        c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
+    if col_name:
+        return c_polygons[geo.columnlist.index(geo.column[col_name])]
+    else:
+        return c_polygons
+
 def get_columns_intersect_polygon(polygon, geo,
                                   threshold=0.0,
                                   cache_shapely=True):
@@ -41,14 +61,7 @@ def get_columns_intersect_polygon(polygon, geo,
         - area portion of column (0.0-1.0) (that intersects)
         - shapely polygons of these columns
     """
-    if cache_shapely:
-        if hasattr(geo, '_column_polygons_'):
-            c_polygons = geo._column_polygons_
-        else:
-            c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
-            geo._column_polygons_ = c_polygons
-    else:
-        c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
+    c_polygons = geo_column_polygon(geo, cache_shapely=cache_shapely)
 
     inter_colnames, inter_portions, column_polygons = [], [], []
     for c,cp in zip(geo.columnlist, c_polygons):
