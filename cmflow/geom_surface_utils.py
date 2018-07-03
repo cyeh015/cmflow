@@ -3,10 +3,13 @@ from matplotlib import pyplot as plt
 from descartes import PolygonPatch
 
 from shapely.geometry import shape
+from shapely.geometry import Point
+from shapely.geometry import LineString
 from shapely.geometry import Polygon
 
 import json
 import unittest
+import os.path
 
 BLUE = '#6699cc'
 GRAY = '#999999'
@@ -142,6 +145,51 @@ def find_wet_columns(geo, features, keep_polygons=False):
     else:
         return feature_columns
 
+def line_cross_polygon(line, polygon):
+    """ Returns positions of a LineString (eg. a river) where it goes through
+    the edges of a Polygon (eg. a mulgraph column).  Note the positions are
+    normalised by the length of the LineString.
+
+    If the whole LineString is within the polygon, a tuple of (0.0, 1.0) will be
+    returned.
+
+    Requires shapely (LineString and Polygon)
+    """
+    from shapely.ops import split as sh_split
+    p_start = Point(*line.coords[0])
+    p_end = Point(*line.coords[-1])
+    splitted = sh_split(line, polygon)
+    ns = len(splitted)
+    if ns >= 3:
+        plot_point(Point(*splitted[0].coords[-1]))
+        plot_point(Point(*splitted[-1].coords[0]))
+        x, y = splitted[-1].coords[0]
+        plt.plot(x, y, '+', color='red')
+        ndd1 = splitted[0].length / line.length
+        ndd2 = 1.0 - (splitted[-1].length / line.length)
+        return (ndd1, ndd2)
+    elif ns == 2:
+        if polygon.contains(p_start):
+            ndd = splitted[0].length / line.length
+            return (0.0, ndd)
+        elif polygon.contains(p_end):
+            ndd = 1 - (splitted[-1].length / line.length)
+            return (ndd, 1.0)
+        else:
+            raise Exception
+    elif ns == 1:
+        # the column does not split the line, ie the line is contained within
+        # the column
+        if polygon.contains(line):
+            return (0.0, 1.0)
+        else:
+            # line not crossing/inside the column, use project point
+            print 'line not crossing/inside the column, use project point'
+            nd = line.project(polygon.centroid, normalized=True)
+            return (nd, nd)
+    else:
+        raise Exception
+
 def plot_features(geo, features, polygons=None,
                   column_names=[], column_texts={}):
     """
@@ -175,13 +223,46 @@ def plot_features(geo, features, polygons=None,
             plt.gca().text(c.centre[0], c.centre[1], column_texts[c.name],
                 verticalalignment='center', color=BLACK)
 
+def interp_z(x, z1, z2):
+    return z1 + x * (z2-z1)
+
+def plot_polygon(ob, fc='#999999', alpha=0.5):
+    patch = PolygonPatch(ob, facecolor=fc, alpha=alpha, zorder=2)
+    plt.gca().add_patch(patch)
+
+def plot_point(ob):
+    x, y = ob.xy
+    plt.plot(x, y, 'o', color='#999999', zorder=1)
+
+def plot_bounds(ob):
+    x, y = zip(*list((p.x, p.y) for p in ob.boundary))
+    plt.plot(x, y, 'o', color='#000000', zorder=1)
+
+def plot_line(ob, color='#6699cc', alpha=0.3, linewidth=3):
+    x, y = ob.xy
+    plt.plot(x, y, color=color, alpha=alpha, linewidth=linewidth,
+             solid_capstyle='round', zorder=2)
+
+def plot_col_surface(cname, d1, d2, z, surf, bottom):
+    p = Polygon([(d1,bottom),(d1,surf),(d2,surf),(d2,bottom)])
+    patch = PolygonPatch(p, facecolor='#999999', alpha=0.5, zorder=2)
+    plt.gca().add_patch(patch)
+
+    p = Polygon([(d1,surf),(d1,z),(d2,z),(d2,surf)])
+    patch = PolygonPatch(p, edgecolor='blue', alpha=0.2, zorder=1)
+    plt.gca().add_patch(patch)
+
+    plt.text((d1+d2)*0.5, z, "%s\n%.2f" % (cname, z),
+             horizontalalignment='center',
+             verticalalignment='top')
+
 def process_wet_columns(geo, features, feature_columns, overwrite={}):
     """ snaps wet columns for waiwera and calculate the water depths
     """
     column_mins = {}
     wet_cols = {}
     layer_tops = [lay.top for lay in geo.layerlist][::-1]
-    for feature, cols in zip(features, feature_columns):
+    for ii,(feature, cols) in enumerate(zip(features, feature_columns)):
         if feature['type'] == 'river':
             for col in cols:
                 fitted = geo.column[col].surface
@@ -223,6 +304,64 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                         column_mins[nb_col.name] = nb_min
                 geo.column[col].surface = new_z
                 wet_cols[col] = (liq_h, feature['name'])
+        elif feature['type'] == 'cascade':
+            print '+++', feature['name']
+            plt.clf()
+
+            cen_line, meta = load_feature(feature['centreline_file'])
+            riv_poly, meta = load_feature(feature['file'])
+            level = feature['elevation'] # a list expected: [start, end]
+            min_depth = feature['min_depth']
+            plt.subplot(2,1,1)
+            plot_line(cen_line, color='#6699cc', alpha=0.9, linewidth=1)
+            plot_polygon(riv_poly, fc='#6699cc', alpha=0.3)
+            plt.subplot(2,1,2)
+            plt.plot([0.0, cen_line.length], [level[0], level[1]], '-')
+            for col in cols:
+
+                fitted = geo.column[col].surface
+                col_poly = geo_column_polygon(geo, col)
+                plt.subplot(2,1,1)
+                nd1, nd2 = line_cross_polygon(cen_line, col_poly)
+
+                plt.subplot(2,1,1)
+                plot_polygon(col_poly, fc='#999999', alpha=0.1)
+                plt.axis('equal')
+
+                z1 = interp_z(nd1, level[0], level[1])
+                z2 = interp_z(nd2, level[0], level[1])
+                water_top = (z1 + z2) / 2.0
+                new_z = snap(layer_tops, water_top - min_depth, 'down')
+                if col in overwrite:
+                    new_z = overwrite[col]
+                    del overwrite[col]
+                    print col, '->', new_z
+                liq_h = water_top - new_z  # wet atm depth
+                nb_min = water_top
+                for nb_col in geo.column[col].neighbour:
+                    if nb_col.name in column_mins:
+                        column_mins[nb_col.name] = max(nb_min, column_mins[nb_col.name])
+                    else:
+                        column_mins[nb_col.name] = nb_min
+                geo.column[col].surface = new_z
+                wet_cols[col] = (liq_h, feature['name'])
+
+                plt.subplot(2,1,2)
+                bottom = layer_tops[layer_tops.index(new_z) - 1]
+                plot_col_surface(col, cen_line.length*nd1, cen_line.length*nd2,
+                                 water_top, new_z, bottom)
+                plt.ylim(bottom, None)
+                print "Column '%s' from river %.2f -- %.2f, %.2f" % (col, nd1, nd2, water_top),
+                print new_z, bottom
+
+
+            plt.gcf().set_size_inches(10., 10.)
+            basename = os.path.splitext(os.path.basename(geo.filename))[0]
+            plt.savefig('%s.png' % (basename + '_cascade_wet_features_' + str(ii)))
+            # plt.show()
+
+        else:
+            raise Exception('process_wet_columns(): Unrecognised feature type %s' % feature['type'])
     for col in geo.columnlist:
         # we columns, adjust, need to take care of wet_cols
         if col.name in wet_cols:
