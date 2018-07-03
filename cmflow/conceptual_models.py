@@ -112,6 +112,11 @@ class CM_Blocky(object):
             # if LeapfrogGM object
             self.zones = grid.litholist
             self.block = grid.blocklitho
+        elif grid is None:
+            # customised cm
+            # !!! NOTE, .populate_model() might not work
+            self.zones = []
+            self.block = {}
         else:
             raise Exception("Unable to load t2grid or LeapfrogGM object")
 
