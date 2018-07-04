@@ -34,13 +34,19 @@ def geo_column_polygon(geo, col_name='', cache_shapely=True):
     If col_name is specified (str) then a single polygon will be returned,
     otherwise a list of (all columns') polygons will be returned. If
     cache_shapely is True, it will attempt to use the cached Polygon within geo.
+
+    If caching is on, geo object will have two additional properties, analog to
+    .columnlist and .column:
+        ._columnpolygonlist
+        ._columnpolygon
     """
     if cache_shapely:
-        if hasattr(geo, '_column_polygons_'):
-            c_polygons = geo._column_polygons_
+        if hasattr(geo, '_columnpolygonlist'):
+            c_polygons = geo._columnpolygonlist
         else:
             c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
-            geo._column_polygons_ = c_polygons
+            geo._columnpolygonlist = c_polygons
+            geo._columnpolygon = {c.name: p for c,p in zip(geo.columnlist, geo._columnpolygonlist)}
     else:
         c_polygons = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
     if col_name:
