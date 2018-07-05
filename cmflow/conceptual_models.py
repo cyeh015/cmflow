@@ -8,6 +8,9 @@ from rtree import index
 
 # for faults CM
 from geom_3dface_utils import Face3D
+#
+from geom_surface_utils import get_columns_intersect_polygon
+from geom_surface_utils import geo_column_polygon
 
 import json
 import time
@@ -237,6 +240,83 @@ class CM_Blocky(object):
                         stats[ii,zi] = stats[ii,zi] + ivol / bvol
         print_wall_time('  Finished calculating/filling stats', loop_stop=True)
         return stats, self.zones
+
+
+class CM_Prism(object):
+    def __init__(self, name, polygon, ztop, zbottom):
+        """ create a conceptual mode
+        """
+        super(CM_Prism, self).__init__()
+        self.name = name
+        self.polygon = polygon
+        self.ztop, self.zbottom = ztop, zbottom
+
+    def column_intersect_area(self, bm_geo):
+        bm_polys = geo_column_polygon(bm_geo)
+        areas = np.zeros(bm_geo.num_columns)
+        for i,bm_poly in enumerate(bm_polys):
+            areas[i] = self.polygon.intersection(bm_poly).area
+        print_wall_time('    finished creating column intersection array', loop_stop=True)
+        return areas
+
+    def layer_intersect_length(self, bm_geo):
+        bm_lines = [LineString([(lay.bottom,0), (lay.top,0)]) for lay in bm_geo.layerlist]
+        cm_line = LineString([(self.ztop,0), (self.zbottom,0)])
+        lengths = np.zeros(bm_geo.num_layers)
+        for i,bm_line in enumerate(bm_lines):
+            lengths[i] = bm_line.intersection(cm_line).length
+        return lengths
+
+    def populate_model(self, bm_geo):
+        """ This is the core of the CM processing, fill-in the stats array.
+
+        stats array rows are of base model blocks, and columns of the zones from
+        CM.  Each cell is the portion of the block occupied by the zone.   In
+        most cases, the total of each row should be 1.0.
+        """
+        def setup_block_name_index_fast(bm_geo):
+            """ based on mulgrid.setup_block_name_index()
+
+            Note atmosphere blocks may not have proper column or layer index,
+            None would be used in place.
+            """
+            block_ij_list = [] # (coli, layj)
+            if bm_geo.num_layers > 0:
+                if bm_geo.atmosphere_type  ==  0: # one atmosphere block
+                    # bn = bm_geo.block_name(bm_geo.layerlist[0].name, bm_geo.atmosphere_column_name)
+                    block_ij_list.append((None, None))
+                elif bm_geo.atmosphere_type == 1: # one atmosphere block per column
+                    for i,col in enumerate(bm_geo.columnlist):
+                        # bn = bm_geo.block_name(bm_geo.layerlist[0].name, col.name)
+                        block_ij_list.append((i, None))
+                for j,lay in enumerate(bm_geo.layerlist[1:]):
+                    for i,col in [(ii,col) for ii,col in enumerate(bm_geo.columnlist) if col.surface > lay.bottom]:
+                        # bn = bm_geo.block_name(lay.name, col.name)
+                        block_ij_list.append((i, j+1))
+            return block_ij_list
+
+        inter_areas = self.column_intersect_area(bm_geo)
+        print_wall_time('  column_intersect_area() finished: ', loop_stop=True)
+        inter_lengths = self.layer_intersect_length(bm_geo)
+        print_wall_time('  layer_intersect_length() finished: ', loop_stop=True)
+
+        stats = np.zeros((bm_geo.num_blocks, 1))
+
+        bm_idx = setup_block_name_index_fast(bm_geo)
+        print_wall_time('  created col/lay idx for BM (new method)', loop_stop=True)
+
+        ### calculating and fill-in stats here
+        for ii,(bm_ci,bm_li) in enumerate(bm_idx):
+            if bm_ci is None or bm_li is None:
+                # atmosphere blocks, skip
+                continue
+            bvol = bm_geo.block_volume(bm_geo.layerlist[bm_li], bm_geo.columnlist[bm_ci])
+            ivol = inter_areas[bm_ci] * inter_lengths[bm_li]
+            if ivol > 0.0:
+                stats[ii,0] = stats[ii,0] + ivol / bvol
+        print_wall_time('  Finished calculating/filling stats', loop_stop=True)
+        return stats, [self.name]
+
 
 class CM_Faults(object):
     """ Conceptual Model of faults as 3D surface (Face3D *.ts objects)
