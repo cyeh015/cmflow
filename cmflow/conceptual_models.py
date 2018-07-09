@@ -1,6 +1,8 @@
 from mulgrids import *
 from t2data import *
 
+import numpy as np
+
 # for blocky CM
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
@@ -414,6 +416,104 @@ class CM_Faults(object):
             print_wall_time('  finished layer %i, found %i blocks' % (jj, count), loop_stop=True)
         return stats, self.zones
 
+
+class ZoneStats(object):
+    def __init__(self, geo):
+        self.bmgeo = geo
+        n = geo.num_blocks - geo.num_atmosphere_blocks
+        self.stats = np.zeros((n, 0)) # 'empty' array, ready to concatenate etc
+        self.zones = []
+        self._reindex()
+
+    def _reindex(self):
+        self.zonestats = {z:self.stats[:,i] for i,z in enumerate(self.zones)}
+        self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.bmgeo.block_name_list[self.bmgeo.num_atmosphere_blocks:])}
+
+    def add_stats(self, stats, zones):
+        for i,zz in enumerate(zones):
+            ss = stats[:,i:i+1]
+            if zz in self.zones:
+                ii = self.zones.index(zz)
+                self.stats[:,ii] = self.stats[:,ii] + ss[:,0]
+            else:
+                self.stats = np.concatenate((self.stats, ss), axis=1)
+                self.zones.append(zz)
+        self._reindex()
+
+    def add_cm(self, cm):
+        stats, zones = cm.populate_model(self.bmgeo)
+        self.add_stats(stats, zones)
+
+def test_zonestats_small():
+    from t2data_utils import create_basic_t2data, update_block_geology
+    START = [time.time()]
+    geo = mulgrid().rectangular([1000]*20, [1000]*20, [100]*5, origin=[0,0,0])
+    stats = ZoneStats(geo)
+    poly = Polygon([
+        np.array([1147.7 , 14125.4]),
+        np.array([487.0  , 13041.7]),
+        np.array([302.0  , 11799.4]),
+        np.array([592.7  , 10372.2]),
+        np.array([1412.1 , 8389.8]),
+        np.array([1993.5 , 7808.4]),
+        np.array([2865.8 , 7729.1]),
+        np.array([3685.1 , 7544.1]),
+        np.array([3975.9 , 6460.4]),
+        np.array([4002.3 , 3262.2]),
+        np.array([3923.0 , 2020.0]),
+        np.array([3685.1 , 1094.9]),
+        np.array([5720.3 , 275.5]),
+        np.array([6645.4 , 381.3]),
+        np.array([7914.1 , 698.4]),
+        np.array([9156.3 , 857.0]),
+        np.array([9922.8 , 804.2]),
+        np.array([11693.7, 1676.4]),
+        np.array([12486.6, 2786.5]),
+        np.array([12539.5, 4927.4]),
+        np.array([13913.9, 7121.2]),
+        np.array([13543.9, 8680.6]),
+        np.array([11376.5, 8574.9]),
+        np.array([9473.5 , 8522.0]),
+        np.array([8072.7 , 8944.9]),
+        np.array([7121.1 , 10160.7]),
+        np.array([6989.0 , 11244.4]),
+        np.array([6856.8 , 11905.2]),
+        np.array([5641.0 , 13041.7]),
+        np.array([4980.2 , 13358.9]),
+        np.array([3711.6 , 14204.7]),
+        np.array([3262.2 , 14733.3]),
+        np.array([1967.1 , 14812.6]),
+        np.array([1359.2 , 14389.7]),
+        ])
+    ztop, zbot = 0.0, -100.0
+    cm = CM_Prism('resis', poly, ztop, zbot)
+    print_wall_time('created CM', loop_stop=True)
+    stats.add_cm(cm)
+    print_wall_time('stats.add_cm()', loop_stop=True)
+    ztop, zbot = -200.0, -300.0
+    cm = CM_Prism('resis', poly, ztop, zbot)
+    print_wall_time('created CM', loop_stop=True)
+    stats.add_cm(cm)
+    print_wall_time('stats.add_cm()', loop_stop=True)
+    dat = create_basic_t2data(geo)
+
+    # starting with single rock deflt
+    orig_name = dat.grid.rocktypelist[0].name
+    dat.grid.rename_rocktype(orig_name, 'NA   ') # not in geological model
+    # ATMOS
+    for i in range(dat.grid.num_atmosphere_blocks):
+        update_block_geology(dat, dat.grid.blocklist[i].name, 'ATMOS')
+    # others
+    for i in range(dat.grid.num_atmosphere_blocks, dat.grid.num_blocks):
+        zi = np.argmax(stats.stats[i,:])
+        if stats.stats[i,zi] > 0.0:
+            # print CM_0_stats[i,zi], CM_0_stats[i,:]
+            new_rname = update_block_geology(dat, dat.grid.blocklist[i].name, stats.zones[0])
+    print_wall_time('update rocktypes', loop_stop=True)
+    geo.write('gtmp.dat')
+    dat.write('tmp.dat')
+    print_wall_time('Finished all, total wall time:', total=True)
+
 def test_cm_blocky_full():
     START = [time.time()]
 
@@ -450,6 +550,7 @@ def test_cm_blocky_full():
                     "stats": stats.tolist(),
                   }, f, indent=4, sort_keys=True)
 
+
 def test_cm_fault_full():
     import glob
     START = [time.time()]
@@ -480,4 +581,5 @@ def test_cm_fault_full():
 if __name__ == '__main__':
     # test_cm_blocky_full()
     # test_cm_fault_full()
+    test_zonestats_small()
     pass
