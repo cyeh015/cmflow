@@ -512,22 +512,16 @@ def test_zonestats_small():
         ])
     ztop, zbot = 0.0, -100.0
     cm = CM_Prism('resis', poly, ztop, zbot)
-    print_wall_time('created CM', loop_stop=True)
     stats.add_cm(cm)
-    print_wall_time('stats.add_cm()', loop_stop=True)
     ztop, zbot = -200.0, -300.0
     cm = CM_Prism('resis', poly, ztop, zbot)
-    print_wall_time('created CM', loop_stop=True)
     stats.add_cm(cm)
-    print_wall_time('stats.add_cm()', loop_stop=True)
     stats.save('tmp_cm.json')
-    print_wall_time('stats.write()', loop_stop=True)
     stats_2 = ZoneStats(geo)
     stats_2.load('tmp_cm.json')
     # check if the same
     assert stats.zones == stats_2.zones
     assert np.array_equal(stats.stats, stats_2.stats)
-    print_wall_time('stats.load()', loop_stop=True)
     dat = create_basic_t2data(geo)
 
     # starting with single rock deflt
@@ -542,10 +536,8 @@ def test_zonestats_small():
         if stats.stats[i,zi] > 0.0:
             # print CM_0_stats[i,zi], CM_0_stats[i,:]
             new_rname = update_block_geology(dat, dat.grid.blocklist[i].name, stats.zones[0])
-    print_wall_time('update rocktypes', loop_stop=True)
     geo.write('gtmp.dat')
     dat.write('tmp.dat')
-    print_wall_time('Finished all, total wall time:', total=True)
 
 def test_cm_blocky_full():
     START = [time.time()]
