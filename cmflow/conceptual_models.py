@@ -429,6 +429,30 @@ class ZoneStats(object):
         self.zonestats = {z:self.stats[:,i] for i,z in enumerate(self.zones)}
         self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.bmgeo.block_name_list[self.bmgeo.num_atmosphere_blocks:])}
 
+    def save(self, filename):
+        import os.path
+        root, ext = os.path.splitext(filename)
+        npy_filename = root + '.npy'
+        np.save(npy_filename, self.stats)
+        with open(filename, 'w') as f:
+            json.dump({
+                        "comments": [
+                            "BM geometry: %s" % self.bmgeo.filename,
+                        ],
+                        "stats": npy_filename,
+                        "zones": self.zones,
+                      }, f, indent=True, sort_keys=True)
+
+    def load(self, filename):
+        with open(filename, 'r') as f:
+            data = json.load(f)
+            self.zones = data['zones']
+            self.stats = np.load(data["stats"])
+            n = self.stats.shape[0]
+            if n != self.bmgeo.num_blocks:
+                raise Exception('Loaded npy stats has different size to .bmgeo')
+            self._reindex()
+
     def add_stats(self, stats, zones):
         for i,zz in enumerate(zones):
             ss = stats[:,i:i+1]
@@ -496,6 +520,14 @@ def test_zonestats_small():
     print_wall_time('created CM', loop_stop=True)
     stats.add_cm(cm)
     print_wall_time('stats.add_cm()', loop_stop=True)
+    stats.save('tmp_cm.json')
+    print_wall_time('stats.write()', loop_stop=True)
+    stats_2 = ZoneStats(geo)
+    stats_2.load('tmp_cm.json')
+    # check if the same
+    assert stats.zones == stats_2.zones
+    assert np.array_equal(stats.stats, stats_2.stats)
+    print_wall_time('stats.load()', loop_stop=True)
     dat = create_basic_t2data(geo)
 
     # starting with single rock deflt
