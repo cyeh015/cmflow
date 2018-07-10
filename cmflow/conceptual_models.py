@@ -420,7 +420,7 @@ class CM_Faults(object):
 class ZoneStats(object):
     def __init__(self, geo):
         self.bmgeo = geo
-        n = geo.num_blocks - geo.num_atmosphere_blocks
+        n = geo.num_blocks
         self.stats = np.zeros((n, 0)) # 'empty' array, ready to concatenate etc
         self.zones = []
         self._reindex()
@@ -447,7 +447,8 @@ class ZoneStats(object):
 def test_zonestats_small():
     from t2data_utils import create_basic_t2data, update_block_geology
     START = [time.time()]
-    geo = mulgrid().rectangular([1000]*20, [1000]*20, [100]*5, origin=[0,0,0])
+    geo = mulgrid().rectangular([1000]*20, [1000]*20, [100]*5, origin=[0,0,0],
+                                 atmos_type=0)
     stats = ZoneStats(geo)
     poly = Polygon([
         np.array([1147.7 , 14125.4]),
