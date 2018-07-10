@@ -417,7 +417,17 @@ class CM_Faults(object):
         return stats, self.zones
 
 
-class ZoneStats(object):
+class BMStats(object):
+    """ Base Model Stats, mainly numpy arrays with rows corresponding to mulgrid
+    blocks, and columns corresponding to zones.  Each is a value, usually
+    between 0.0 and 1.0.  Often 1.0 is indicating that particular block is fully
+    within the zone.
+
+    .stats numpy array (n,m), n = num of model blocks, m = num of zones
+    .zones list of zone names (str)
+    .zonestats dict of stats column by zone names
+    .cellstats dict of stats row by block name
+    """
     def __init__(self, geo):
         self.bmgeo = geo
         n = geo.num_blocks
@@ -473,7 +483,7 @@ def test_zonestats_small():
     START = [time.time()]
     geo = mulgrid().rectangular([1000]*20, [1000]*20, [100]*5, origin=[0,0,0],
                                  atmos_type=0)
-    stats = ZoneStats(geo)
+    stats = BMStats(geo)
     poly = Polygon([
         np.array([1147.7 , 14125.4]),
         np.array([487.0  , 13041.7]),
@@ -517,7 +527,7 @@ def test_zonestats_small():
     cm = CM_Prism('resis', poly, ztop, zbot)
     stats.add_cm(cm)
     stats.save('tmp_cm.json')
-    stats_2 = ZoneStats(geo)
+    stats_2 = BMStats(geo)
     stats_2.load('tmp_cm.json')
     # check if the same
     assert stats.zones == stats_2.zones
