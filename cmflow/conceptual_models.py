@@ -437,7 +437,7 @@ class BMStats(object):
 
     def _reindex(self):
         self.zonestats = {z:self.stats[:,i] for i,z in enumerate(self.zones)}
-        self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.bmgeo.block_name_list[self.bmgeo.num_atmosphere_blocks:])}
+        self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.bmgeo.block_name_list)}
 
     def save(self, filename):
         import os.path
