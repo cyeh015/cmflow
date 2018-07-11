@@ -444,6 +444,8 @@ class BMStats(object):
         root, ext = os.path.splitext(filename)
         npy_filename = root + '.npy'
         np.save(npy_filename, self.stats)
+        # the .npy file will be expected in the same directory, so strip dir
+        npy_filename = os.path.split(npy_filename)[1]
         with open(filename, 'w') as f:
             json.dump({
                         "comments": [
@@ -454,10 +456,13 @@ class BMStats(object):
                       }, f, indent=True, sort_keys=True)
 
     def load(self, filename):
+        import os.path
         with open(filename, 'r') as f:
             data = json.load(f)
             self.zones = data['zones']
-            self.stats = np.load(data["stats"])
+            # .npy file expected relative to the json file
+            npy_filename = os.path.join(os.path.split(filename)[0], data["stats"])
+            self.stats = np.load(npy_filename)
             n = self.stats.shape[0]
             if n != self.bmgeo.num_blocks:
                 raise Exception('Loaded npy stats has different size to .bmgeo')
