@@ -465,7 +465,9 @@ class BMStats(object):
             self.stats = np.load(npy_filename)
             n = self.stats.shape[0]
             if n != self.bmgeo.num_blocks:
-                raise Exception('Loaded npy stats has different size to .bmgeo')
+                msg1 = 'Loaded BMStats has different number of blocks to geometry file.'
+                msg2 = 'BMStats (%i) != Geometry (%i)' % (n, self.bmgeo.num_blocks)
+                raise Exception('\n'.join([msg1, msg2]))
             self._reindex()
 
     def add_stats(self, stats, zones):
