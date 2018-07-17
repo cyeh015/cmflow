@@ -435,16 +435,6 @@ class CM_Faults(object):
                                 carea = geo.column[c].area
                                 stats[bi,fi] = stats[bi,fi] + iarea / carea
                                 count += 1
-                    # inter_areas = column_intersect_area(line.buffer(self.dilation), geo)
-                    # for ii,(bm_ci,bm_li) in enumerate(block_ij_idx):
-                    #     if bm_ci is None or bm_li is None:
-                    #         # atmosphere blocks, skip
-                    #         continue
-                    #     carea = geo.columnlist[bm_ci].area
-                    #     iarea = inter_areas[bm_ci]
-                    #     if iarea > 0.0:
-                    #         stats[ii,fi] = stats[ii,fi] + iarea / carea
-                    #         count += 1
                 else:
                     for ii in col_idx.intersection(line.bounds):
                         if line.intersection(col_polys[ii]).length > 0.0:
