@@ -389,7 +389,7 @@ class CM_Faults(object):
                         bi += 1
             return block_ij_idx
 
-        stats = np.zeros((geo.num_blocks, self.num_zones), dtype=bool)
+        stats = np.zeros((geo.num_blocks, self.num_zones))
         col_polys, col_idx = column_polygons(geo)
         block_ij_idx = setup_block_name_index_fast(geo)
         print_wall_time('  setup_block_name_index_fast()', loop_stop=True)
@@ -405,12 +405,12 @@ class CM_Faults(object):
                     # cutting through the fault Face
                     print "    skipping layer %i '%s' with fault '%s'" % (jj, lay.name, fname)
                     continue
-                line = LineString([tuple(pt[:2]) for pt in fault.search_line()])
+                line = LineString([tuple(pt[:2]) for pt in pts])
                 for ii in col_idx.intersection(line.bounds):
                     if line.intersection(col_polys[ii]).length > 0.0:
                         if (ii,jj) in block_ij_idx:
                             bi = block_ij_idx[(ii,jj)]
-                            stats[bi,fi] = True
+                            stats[bi,fi] = 1.0
                             count += 1
                             # print 'found ', geo.block_name_list[bi]
             print_wall_time('  finished layer %i, found %i blocks' % (jj, count), loop_stop=True)
