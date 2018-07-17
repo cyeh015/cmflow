@@ -326,12 +326,22 @@ class CM_Faults(object):
     NOTE this simplements the simple way of getting blocks crossed by faults.
     Instead of 3D Face cutting across 3D blocks/elements, I simply let 3D Face
     cuts across layer centre plane.
+
+    if dilation is specified as a positive float, then the line will be dilated
+    (.buffer) with the specified amount.  This changes the behaviour of stats,
+    instead of two possible values of 0.0/1.0 for normal fault line case, this
+    will return stats with intersection area ratio as other CMs.
     """
-    def __init__(self, faults=None):
+    def __init__(self, faults=None, dilation=None):
         import os.path
         super(CM_Faults, self).__init__()
         self.zones = []
         self.fault = {}
+        self.dilation = None
+        if isinstance(dilation, float):
+            if dilation > 0.0:
+                self.dilation = dilation
+                print 'Fault uses dilation'
         if faults is None:
             pass
         elif isinstance(faults, list):
@@ -352,6 +362,14 @@ class CM_Faults(object):
         self.num_zones = len(self.zones)
 
     def populate_model(self, geo):
+
+        def column_intersect_area(dilated_line, bm_geo):
+            bm_polys = geo_column_polygon(bm_geo)
+            areas = np.zeros(bm_geo.num_columns)
+            for i,bm_poly in enumerate(bm_polys):
+                areas[i] = dilated_line.intersection(bm_poly).area
+            print_wall_time('    finished creating column intersection array', loop_stop=True)
+            return areas
 
         def column_polygons(geo):
             # CM usually has larger number of columns and is regular, so I should
@@ -406,13 +424,35 @@ class CM_Faults(object):
                     print "    skipping layer %i '%s' with fault '%s'" % (jj, lay.name, fname)
                     continue
                 line = LineString([tuple(pt[:2]) for pt in pts])
-                for ii in col_idx.intersection(line.bounds):
-                    if line.intersection(col_polys[ii]).length > 0.0:
-                        if (ii,jj) in block_ij_idx:
-                            bi = block_ij_idx[(ii,jj)]
-                            stats[bi,fi] = 1.0
-                            count += 1
-                            # print 'found ', geo.block_name_list[bi]
+                if self.dilation is not None:
+                    line = line.buffer(self.dilation)
+                    for ii in col_idx.intersection(line.bounds):
+                        iarea = line.intersection(col_polys[ii]).area
+                        if iarea > 0.0:
+                            if (ii,jj) in block_ij_idx:
+                                bi = block_ij_idx[(ii,jj)]
+                                c = geo.column_name(geo.block_name_list[bi])
+                                carea = geo.column[c].area
+                                stats[bi,fi] = stats[bi,fi] + iarea / carea
+                                count += 1
+                    # inter_areas = column_intersect_area(line.buffer(self.dilation), geo)
+                    # for ii,(bm_ci,bm_li) in enumerate(block_ij_idx):
+                    #     if bm_ci is None or bm_li is None:
+                    #         # atmosphere blocks, skip
+                    #         continue
+                    #     carea = geo.columnlist[bm_ci].area
+                    #     iarea = inter_areas[bm_ci]
+                    #     if iarea > 0.0:
+                    #         stats[ii,fi] = stats[ii,fi] + iarea / carea
+                    #         count += 1
+                else:
+                    for ii in col_idx.intersection(line.bounds):
+                        if line.intersection(col_polys[ii]).length > 0.0:
+                            if (ii,jj) in block_ij_idx:
+                                bi = block_ij_idx[(ii,jj)]
+                                stats[bi,fi] = 1.0
+                                count += 1
+                                # print 'found ', geo.block_name_list[bi]
             print_wall_time('  finished layer %i, found %i blocks' % (jj, count), loop_stop=True)
         return stats, self.zones
 
