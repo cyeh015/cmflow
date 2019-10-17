@@ -1,7 +1,8 @@
 from mulgrids import *
 from t2grids import *
 from t2data import t2generator
-from t2data_json import t2data_export_json as t2data
+from t2data import *
+# from t2data_json import t2data_export_json as t2data
 
 import os.path
 import json
