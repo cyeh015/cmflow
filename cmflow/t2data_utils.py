@@ -149,7 +149,7 @@ def add_rain_geners(geo, dat, config):
     newlabel = config['NewGenerLabel']
     infiltration = config['Infiltration']
     annualrain = config['AnnualRainFall mm/yr']
-    (rain_density,u) = t2thermo.cowat(rain_temp,100135.0)
+    (rain_density,u) = t2thermo.cowat(rain_temp,101325.0)
     rain_enth = enthalpy(rain_temp)
     mmyr2kgs = rain_density/1000.0/365.25/24.0/60.0/60.0
 
