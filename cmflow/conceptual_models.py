@@ -125,6 +125,11 @@ class CM_Blocky(object):
         else:
             raise Exception("Unable to load t2grid or LeapfrogGM object")
 
+        # caching objects, so can call populate multiple times efficiently
+        self._inter_areas, self._bm_col_ccis = None, None
+        self._inter_lengths, self._bm_lay_clis = None, None
+        self._bm_idx = None
+
         self.num_zones = len(self.zones)
 
     def _load_from_t2grid(self, grid):
@@ -142,6 +147,8 @@ class CM_Blocky(object):
         element is a (varying length) list of cm columns that intersects bm
         column.
         """
+        if self._inter_areas is not None and self._bm_col_ccis is not None:
+            return self._inter_areas, self._bm_col_ccis
 
         bm_polys = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
         print_wall_time('    constructed all %i BM polys' % geo.num_columns, loop_stop=True)
@@ -164,9 +171,14 @@ class CM_Blocky(object):
                 if areas[i,j] > 0.0:
                     bm_col_ccis[-1].append(j)
         print_wall_time('    finished creating column intersection array', loop_stop=True)
+
+        self._inter_areas, self._bm_col_ccis = areas, bm_col_ccis
         return areas, bm_col_ccis
 
     def layer_intersect_length(self, geo):
+        if self._inter_lengths is not None and self._bm_lay_clis is not None:
+            return self._inter_lengths, self._bm_lay_clis
+
         bm_lines = [LineString([(lay.bottom,0), (lay.top,0)]) for lay in geo.layerlist]
         cm_lines = [LineString([(lay.bottom,0), (lay.top,0)]) for lay in self.geo.layerlist]
         bm_lay_clis = [] # list of CM lay indices that intersects BM layers
@@ -177,6 +189,8 @@ class CM_Blocky(object):
                 lengths[i,j] = bm_line.intersection(cm_line).length
                 if lengths[i,j] > 0.0:
                     bm_lay_clis[-1].append(j)
+
+        self._inter_lengths, self._bm_lay_clis = lengths, bm_lay_clis
         return lengths, bm_lay_clis
 
     def populate_model(self, geo):
@@ -219,11 +233,12 @@ class CM_Blocky(object):
 
         # cm_idx = setup_block_name_index_fast(self.geo)
         # print_wall_time('created col/lay idx for CM (new method)', loop_stop=True)
-        bm_idx = setup_block_name_index_fast(geo)
+        if self._bm_idx is None:
+            self._bm_idx = setup_block_name_index_fast(geo)
         print_wall_time('  created col/lay idx for BM (new method)', loop_stop=True)
 
         ### calculating and fillinf stats here
-        for ii,(bm_ci,bm_li) in enumerate(bm_idx):
+        for ii,(bm_ci,bm_li) in enumerate(self._bm_idx):
             if bm_ci is None or bm_li is None:
                 # atmosphere blocks, skip
                 continue
