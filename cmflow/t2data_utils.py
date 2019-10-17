@@ -168,6 +168,77 @@ def add_rain_geners(geo, dat, config):
         dat.add_generator(gen)
     return dat, total_rain
 
+def create_rain_geners(geo, config):
+    """ Creates two lists of geners, one for NS one for PR.  NS one uses
+    constant AnnualRainFall, while PR uses TimedRainFall.  If TimedRainFall does
+    not exist in the config, PR will be the same as NS, constant MSS.
+    """
+    import t2thermo
+    if isinstance(config, str):
+        with open(config, 'r') as f:
+            config = json.load(f)
+
+    if 'IncludeColumnsOnly' in config and len(config['IncludeColumnsOnly']) != 0:
+        cols = config['IncludeColumnsOnly']
+    elif 'ExludeColumns' in config and len(config['ExludeColumns']) != 0:
+        cols = [c.name for c in geo.columnlist if c.name not in config['ExludeColumns']]
+    elif ('ExludeColumns' not in config or len(config['ExludeColumns']) == 0) and ('IncludeColumnsOnly' not in config or len(config['IncludeColumnsOnly']) == 0):
+        cols = [c.name for c in geo.columnlist]
+    else:
+        raise Exception('Error: Both [ExludeColumns] and [IncludeColumnsOnly] used, this is confusing.')
+
+    rain_temp = config['Rain Temperature']
+    newlabel = config['NewGenerLabel']
+    infiltration = config['Infiltration']
+    annualrain = config['AnnualRainFall mm/yr']
+    (rain_density,u) = t2thermo.cowat(rain_temp,101325.0)
+    rain_enth = enthalpy(rain_temp)
+    mmyr2kgs = rain_density/1000.0/365.25/24.0/60.0/60.0
+
+    # rain history
+    do_pr = False
+    if 'TimeOffset yr' in config:
+        offset = ['TimeOffset yr']
+    else:
+        offset = 0.0
+    if 'TimedRainFall yr,mm/yr' in config:
+        times, rains = zip(*config['TimedRainFall yr,mm/yr'])
+        times, rains = np.array(times), np.array(rains)
+        times = times - offset
+        enths = np.ones_like(rains)
+        enths = enths * rain_enth
+        do_pr = True
+
+    total_rain = 0.0
+    ns_gs, pr_gs = [], []
+    for c in cols:
+        col = geo.column[c]
+        layername = geo.layerlist[geo.num_layers-col.num_layers].name
+        blockname = geo.block_name(layername, col.name)
+        genname = modify_wellname(newlabel, blockname)
+
+        # NS
+        rain = col.area * annualrain * infiltration * mmyr2kgs
+        total_rain = total_rain + rain
+        gen=t2generator(name=genname, block=blockname, type='MASS',
+                        gx=rain, ex=rain_enth)
+        ns_gs.append(gen)
+
+        # PR
+        if do_pr:
+            rates = col.area * rains * infiltration * mmyr2kgs
+            gen=t2generator(name=genname, block=blockname, type='MASS',
+                            gx=rain, ex=rain_enth,
+                            time=times, rate=rates, enthalpy=list(enths),
+                            ltab=len(times), itab='1')
+            pr_gs.append(gen)
+        else:
+            pr_gs.append(gen)
+
+    return ns_gs, pr_gs
+
+
+
 def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
     """
         this copies the rocktype onto blocks in blk_names, if need new rocktype
