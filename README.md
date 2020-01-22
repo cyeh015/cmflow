@@ -77,3 +77,17 @@ objects.  It means the conceptual model is "applied" onto the bm_geo.
 
 
 
+# Install Dependency
+
+One of the dependency package `shapely` needs a C++ library called GEOS.
+
+On windows, it is easier to be installed by using Christoph Gohlke's [non-official build](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely)
+
+On Linux and OSX, you can simply:
+    
+    pip install shapely
+
+`descartes` can be installed on all platform by:
+
+    pip install descartes
+
