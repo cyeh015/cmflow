@@ -1,3 +1,23 @@
+# Install
+
+    pip install -U cmflow
+
+# Install Dependency
+
+On Windows, `Shapely` and `Rtree` are easier to be installed by using Christoph Gohlke's non-official build: 
+
+- [https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely)
+- [https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree](https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree)
+
+On Linux and OSX, you can simply:
+    
+    pip install shapely
+    pip install rtree
+
+`descartes` can be installed on all platform by:
+
+    pip install descartes
+
 # Example
 
 Creates BMStats that can be used later, from Leapfrog Geology:
@@ -75,19 +95,4 @@ objects.  It means the conceptual model is "applied" onto the bm_geo.
 
 
 
-
-
-# Install Dependency
-
-One of the dependency package `shapely` needs a C++ library called GEOS.
-
-On windows, it is easier to be installed by using Christoph Gohlke's [non-official build](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely)
-
-On Linux and OSX, you can simply:
-    
-    pip install shapely
-
-`descartes` can be installed on all platform by:
-
-    pip install descartes
 
