@@ -204,7 +204,7 @@ def create_rain_geners(geo, config):
     if 'TimedRainFall yr,mm/yr' in config:
         times, rains = zip(*config['TimedRainFall yr,mm/yr'])
         times, rains = np.array(times), np.array(rains)
-        times = times - offset
+        times = (times - offset) * 60.*60.*24.*365.25
         enths = np.ones_like(rains)
         enths = enths * rain_enth
         do_pr = True
