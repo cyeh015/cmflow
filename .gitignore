@@ -28,3 +28,6 @@ ChangeLog
 # Editor files
 *~
 *.swp
+
+# virtualenv
+env_*/
