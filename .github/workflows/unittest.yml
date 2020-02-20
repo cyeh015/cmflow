@@ -25,10 +25,6 @@ jobs:
         sudo apt-get install -y python-shapely
         python -m pip install --upgrade pip
         pip install setuptools
-        pip install numpy
-        pip install matplotlib
-        pip install shapely
-        pip install rtree
         pip install descartes
         mkdir pytough
         cd pytough
