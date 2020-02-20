@@ -1,7 +1,7 @@
 from conceptual_models import *
 import unittest
 
-class TestCM(unittest.TestCase):
+class TestCMBlocky(unittest.TestCase):
     def setUp(self):
         cm_geo = mulgrid().rectangular(
             [10.] * 10,
@@ -19,7 +19,7 @@ class TestCM(unittest.TestCase):
         cm_grid.add_rocktype(r)
         cm_grid.blocklist[555].rocktype = r
 
-        self.cm_fine = CM(cm_geo, cm_grid)
+        self.cm_fine = CM_Blocky(cm_geo, cm_grid)
 
         cm_geo = mulgrid().rectangular(
             [50.] * 2,
@@ -37,7 +37,7 @@ class TestCM(unittest.TestCase):
         cm_grid.add_rocktype(r)
         cm_grid.blocklist[6].rocktype = r
 
-        self.cm_coarse = CM(cm_geo, cm_grid)
+        self.cm_coarse = CM_Blocky(cm_geo, cm_grid)
 
     def test_simple(self):
         bm_geo = mulgrid().rectangular(
