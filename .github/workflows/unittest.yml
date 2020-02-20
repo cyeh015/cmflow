@@ -28,6 +28,7 @@ jobs:
         pip install numpy
         pip install matplotlib
         pip install shapely
+        pip install rtree
         pip install descartes
         mkdir pytough
         cd pytough
