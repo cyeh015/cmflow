@@ -9,19 +9,15 @@ On Windows, `Shapely` and `Rtree` are easier to be installed by using Christoph 
 - [https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely)
 - [https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree](https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree)
 
-On Linux (Ubuntu shown here) it requires shapely and rtree's dependencies to be installed via apt-get:
-
-    sudo apt-get install -y libgeos-c1v5
-    sudo apt-get install -y libspatialindex-dev
-
-Then the packages can be installed via pip:
-    
-    pip install shapely
-    pip install rtree
-
-The last dependency `descartes` can be installed on all platform by:
+`descartes` can be installed on all platform by:
 
     pip install descartes
+
+On Linux (Ubuntu shown here) these can be installed via apt-get:
+
+    sudo apt-get install -y python-shapely
+    sudo apt-get install -y python-rtree
+    sudo apt-get install -y python-descartes
 
 # Example
 
