@@ -1,13 +1,19 @@
 from geom_3dface_utils import *
 
 import unittest
+import os
+
+# this file's location, use .join() to locate other files at the same directory
+#     os.path.join(__location__, 'abc.xyz')
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 class TestFace(unittest.TestCase):
     """docstring for TestFace"""
 
     def test_load(self):
         fault = Face3D()
-        fault.read('test_geom_3dface_utils_ex.ts')
+        fault.read(os.path.join(__location__, 'test_geom_3dface_utils_ex.ts'))
         self.assertEqual(len(fault.points),8286)
         self.assertEqual(len(fault.triangles),15857)
 
@@ -89,11 +95,11 @@ class TestFaultFullCase(unittest.TestCase):
         if it runs ok.
         """
         fault = Face3D()
-        fault.read('test_geom_3dface_utils_ex.ts')
+        fault.read(os.path.join(__location__, 'test_geom_3dface_utils_ex.ts'))
         print fault
 
         from mulgrids import mulgrid
-        geo = mulgrid('test_geom_3dface_utils_geom.dat')
+        geo = mulgrid(os.path.join(__location__, 'test_geom_3dface_utils_geom.dat'))
 
         for lay in geo.layerlist:
             print '----- layer:', lay.name, lay.centre
