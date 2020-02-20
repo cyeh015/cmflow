@@ -20,13 +20,13 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get install -y libgeos-dev
+        sudo apt-get update -y
+        sudo apt-get install -y python-rtree
+        sudo apt-get install -y python-shapely
         python -m pip install --upgrade pip
         pip install setuptools
         pip install numpy
         pip install matplotlib
-        pip install shapely
-        pip install rtree
         pip install descartes
         mkdir pytough
         cd pytough
