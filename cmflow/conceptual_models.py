@@ -552,6 +552,17 @@ class BMStats(object):
             raise BMStatsError('\n'.join([msg1, msg2]))
         self._reindex()
 
+    def add_zone(self, zone, stats):
+        """ append a single zone, with stats an array (n,1) n is number of
+        blocks
+        """
+        if zone in self.zones:
+            raise BMStatsError('zone {} already in BMStats.zones'.format(zone))
+        self.zones.append(zone)
+        stats = np.reshape(np.array(stats), (self.stats.shape[0], 1))
+        self.stats = np.concatenate((self.stats, stats), axis=1)
+        self._reindex()
+
     def add_stats(self, stats, zones):
         for i,zz in enumerate(zones):
             ss = stats[:,i:i+1]

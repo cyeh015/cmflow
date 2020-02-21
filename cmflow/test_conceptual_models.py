@@ -67,6 +67,10 @@ class TestBMStats(unittest.TestCase):
         self.assertEqual(list(bm5.cellstats[b1]), [0., 0.])
         self.assertEqual(list(bm5.cellstats[b2]), [0., 0.])
 
+        # add a zone
+        bm5.add_zone('CCC', [0., 0., 0., 0., 0., 0.])
+        self.assertEqual(list(bm5.cellstats[b1]), [0., 0., 0.])
+        self.assertEqual(list(bm5.cellstats[b2]), [0., 0., 0.])
 
 class TestCMBlocky(unittest.TestCase):
     def setUp(self):
