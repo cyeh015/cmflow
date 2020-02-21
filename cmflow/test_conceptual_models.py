@@ -4,50 +4,69 @@ import os
 import unittest
 
 class TestBMStats(unittest.TestCase):
-    def test_new_save_load(self):
-        geo1 = mulgrid().rectangular(
-            [10.] * 10,
-            [10.] * 10,
-            [10.] * 10,
+    def setUp(self):
+        self.geo1 = mulgrid().rectangular(
+            [10.] * 3,
+            [10.] * 2,
+            [10.] * 1,
             convention=0,
             atmos_type=2, # no atm blocks
-            origin=[0,0,0],
+            origin=[0.,0.,0.],
             justify='r',
             case=None,
             chars=ascii_lowercase)
-        self.assertEqual(len(geo1.block_name_list), 1000)
+
+    def test_empty_save_load(self):
+        self.assertEqual(len(self.geo1.block_name_list), 6)
 
         # new/empty bms requires geo
         with self.assertRaises(BMStatsError):
             bms = BMStats()
 
         # new/empty bms
-        bms = BMStats(geo=geo1)
-        self.assertEqual(bms.geo, geo1)
-        self.assertEqual(bms.stats.shape, (1000, 0)) # np.array (num_blocks, num_zones)
+        bms = BMStats(geo=self.geo1)
+        self.assertEqual(bms.geo, self.geo1)
+        self.assertEqual(bms.stats.shape, (6, 0)) # np.array (num_blocks, num_zones)
         self.assertEqual(bms.zones, [])
 
         # save bms
-        geo1.write('_bms1.dat')
+        self.geo1.write('_bms1.dat')
         bms.save('_bms1.json')
         self.assertTrue(os.path.isfile('_bms1.json'))
         self.assertTrue(os.path.isfile('_bms1.dat'))
         self.assertTrue(os.path.isfile('_bms1.npy'))
 
         # load bms, with pre-loaded geo
-        bms2 = BMStats('_bms1.json', geo=geo1)
-        self.assertEqual(bms2.geo, geo1)
-        self.assertEqual(bms2.stats.shape, (1000, 0))
+        bms2 = BMStats('_bms1.json', geo=self.geo1)
+        self.assertEqual(bms2.geo, self.geo1)
+        self.assertEqual(bms2.stats.shape, (6, 0))
 
-        # load bms
+        # load bms, will load "geometry" automatically
         bms3 = BMStats('_bms1.json')
-        self.assertEqual(bms3.geo.block_name_list, geo1.block_name_list)
-        self.assertEqual(bms3.stats.shape, (1000, 0))
+        self.assertEqual(bms3.geo.block_name_list, self.geo1.block_name_list)
+        self.assertEqual(bms3.stats.shape, (6, 0))
         self.assertEqual(bms3.zones, [])
 
         os.remove('_bms1.json')
         os.remove('_bms1.dat')
         os.remove('_bms1.npy')
+
+    def test_new(self):
+        # new with something with error
+        with self.assertRaises(BMStatsError):
+            zones = ['A', 'BB', 'CCC']
+            stats = np.zeros((6,2))
+            bm4 = BMStats(geo=self.geo1, stats=stats, zones=zones)
+
+        # new with something
+        zones = ['A', 'BB']
+        stats = np.zeros((6,2))
+        bm5 = BMStats(geo=self.geo1, stats=stats, zones=zones)
+        b1 = self.geo1.block_name_list[0]
+        b2 = self.geo1.block_name_list[-1]
+        self.assertEqual(list(bm5.cellstats[b1]), [0., 0.])
+        self.assertEqual(list(bm5.cellstats[b2]), [0., 0.])
+
 
 class TestCMBlocky(unittest.TestCase):
     def setUp(self):

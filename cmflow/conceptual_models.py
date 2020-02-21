@@ -499,17 +499,19 @@ class BMStats(object):
                 self.load(filename, load_geo=False)
             return
         # new/empty
+        self.geo, self.stats, self.zones = geo, stats, zones
         if geo is None:
             raise BMStatsError("New/empty BMStats requires a valid mulgrid geometry passed in as 'geo'")
-        self.geo = geo
         n = geo.num_blocks
-        if stats is None:
-            self.stats = np.zeros((n, 0)) # 'empty' array, ready to concatenate etc
         if zones is None:
             self.zones = []
+        if stats is None:
+            self.stats = np.zeros((n, len(self.zones))) # 'empty' array, ready to concatenate etc
         self._reindex()
 
     def _reindex(self):
+        if self.stats.shape != (self.geo.num_blocks, len(self.zones)):
+            raise BMStatsError('.stats shape {} mismatches (.geo.num_blocks, len(.zones)) {}'.format(self.stats.shape, (self.geo.num_blocks, len(self.zones))))
         self.zonestats = {z:self.stats[:,i] for i,z in enumerate(self.zones)}
         self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.geo.block_name_list)}
 
@@ -547,7 +549,7 @@ class BMStats(object):
         if n != self.geo.num_blocks:
             msg1 = 'Loaded BMStats has different number of blocks to geometry file.'
             msg2 = 'BMStats (%i) != Geometry (%i)' % (n, self.geo.num_blocks)
-            raise Exception('\n'.join([msg1, msg2]))
+            raise BMStatsError('\n'.join([msg1, msg2]))
         self._reindex()
 
     def add_stats(self, stats, zones):
