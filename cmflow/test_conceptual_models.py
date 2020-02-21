@@ -1,9 +1,11 @@
 from conceptual_models import *
+
+import os
 import unittest
 
 class TestBMStats(unittest.TestCase):
-    def setUp(self):
-        self.geo = mulgrid().rectangular(
+    def test_new_save_load(self):
+        geo1 = mulgrid().rectangular(
             [10.] * 10,
             [10.] * 10,
             [10.] * 10,
@@ -13,13 +15,39 @@ class TestBMStats(unittest.TestCase):
             justify='r',
             case=None,
             chars=ascii_lowercase)
+        self.assertEqual(len(geo1.block_name_list), 1000)
 
-    def test_init(self):
-        self.assertEqual(len(self.geo.block_name_list), 1000)
-        bms = BMStats(self.geo)
-        self.assertEqual(bms.bmgeo, self.geo)
+        # new/empty bms requires geo
+        with self.assertRaises(BMStatsError):
+            bms = BMStats()
+
+        # new/empty bms
+        bms = BMStats(geo=geo1)
+        self.assertEqual(bms.geo, geo1)
         self.assertEqual(bms.stats.shape, (1000, 0)) # np.array (num_blocks, num_zones)
         self.assertEqual(bms.zones, [])
+
+        # save bms
+        geo1.write('_bms1.dat')
+        bms.save('_bms1.json')
+        self.assertTrue(os.path.isfile('_bms1.json'))
+        self.assertTrue(os.path.isfile('_bms1.dat'))
+        self.assertTrue(os.path.isfile('_bms1.npy'))
+
+        # load bms, with pre-loaded geo
+        bms2 = BMStats('_bms1.json', geo=geo1)
+        self.assertEqual(bms2.geo, geo1)
+        self.assertEqual(bms2.stats.shape, (1000, 0))
+
+        # load bms
+        bms3 = BMStats('_bms1.json')
+        self.assertEqual(bms3.geo.block_name_list, geo1.block_name_list)
+        self.assertEqual(bms3.stats.shape, (1000, 0))
+        self.assertEqual(bms3.zones, [])
+
+        os.remove('_bms1.json')
+        os.remove('_bms1.dat')
+        os.remove('_bms1.npy')
 
 class TestCMBlocky(unittest.TestCase):
     def setUp(self):

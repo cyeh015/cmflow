@@ -462,6 +462,9 @@ class CM_Faults(object):
         return stats, self.zones
 
 
+class BMStatsError(Exception):
+    pass
+
 class BMStats(object):
     """ Base Model Stats, mainly numpy arrays with rows corresponding to mulgrid
     blocks, and columns corresponding to zones.  Each is a value, usually
@@ -473,16 +476,42 @@ class BMStats(object):
     .zonestats dict of stats column by zone names
     .cellstats dict of stats row by block name
     """
-    def __init__(self, geo):
-        self.bmgeo = geo
+    def __init__(self, filename=None, geo=None, stats=None, zones=None):
+        """
+        Usage:
+            # will load: .json .npy and geometry file
+            bms = BMStats('abc.json')
+
+            # geo already loaded, "geometry" in abc.json no longer matter
+            bms = BMStats('abc.json', geo=geo)
+
+            # new empty BMStats, using pre-loaded geo
+            geo = mulgrid('xyz.dat')
+            bms = BMStats(geo=geo)
+        """
+        # load from file
+        if filename is not None:
+            if geo is None:
+                self.load(filename)
+            else:
+                # if geo is specified (pre-loaded)
+                self.geo = geo
+                self.load(filename, load_geo=False)
+            return
+        # new/empty
+        if geo is None:
+            raise BMStatsError("New/empty BMStats requires a valid mulgrid geometry passed in as 'geo'")
+        self.geo = geo
         n = geo.num_blocks
-        self.stats = np.zeros((n, 0)) # 'empty' array, ready to concatenate etc
-        self.zones = []
+        if stats is None:
+            self.stats = np.zeros((n, 0)) # 'empty' array, ready to concatenate etc
+        if zones is None:
+            self.zones = []
         self._reindex()
 
     def _reindex(self):
         self.zonestats = {z:self.stats[:,i] for i,z in enumerate(self.zones)}
-        self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.bmgeo.block_name_list)}
+        self.cellstats = {b:self.stats[i,:] for i,b in enumerate(self.geo.block_name_list)}
 
     def save(self, filename):
         import os.path
@@ -491,29 +520,35 @@ class BMStats(object):
         np.save(npy_filename, self.stats)
         # the .npy file will be expected in the same directory, so strip dir
         npy_filename = os.path.split(npy_filename)[1]
+        data = {
+            "comments": [
+                "BM geometry: %s" % self.geo.filename,
+            ],
+            "stats": npy_filename,
+            "zones": self.zones,
+            "geometry": None,
+            }
+        if self.geo is not None:
+            data["geometry"] = self.geo.filename
         with open(filename, 'w') as f:
-            json.dump({
-                        "comments": [
-                            "BM geometry: %s" % self.bmgeo.filename,
-                        ],
-                        "stats": npy_filename,
-                        "zones": self.zones,
-                      }, f, indent=True, sort_keys=True)
+            json.dump(data, f, indent=True, sort_keys=True)
 
-    def load(self, filename):
+    def load(self, filename, load_geo=True):
         import os.path
         with open(filename, 'r') as f:
             data = json.load(f)
-            self.zones = data['zones']
-            # .npy file expected relative to the json file
-            npy_filename = os.path.join(os.path.split(filename)[0], data["stats"])
-            self.stats = np.load(npy_filename)
-            n = self.stats.shape[0]
-            if n != self.bmgeo.num_blocks:
-                msg1 = 'Loaded BMStats has different number of blocks to geometry file.'
-                msg2 = 'BMStats (%i) != Geometry (%i)' % (n, self.bmgeo.num_blocks)
-                raise Exception('\n'.join([msg1, msg2]))
-            self._reindex()
+        if load_geo:
+            self.geo = mulgrid(data['geometry'])
+        self.zones = data['zones']
+        # .npy file expected relative to the json file
+        npy_filename = os.path.join(os.path.split(filename)[0], data["stats"])
+        self.stats = np.load(npy_filename)
+        n = self.stats.shape[0]
+        if n != self.geo.num_blocks:
+            msg1 = 'Loaded BMStats has different number of blocks to geometry file.'
+            msg2 = 'BMStats (%i) != Geometry (%i)' % (n, self.geo.num_blocks)
+            raise Exception('\n'.join([msg1, msg2]))
+        self._reindex()
 
     def add_stats(self, stats, zones):
         for i,zz in enumerate(zones):
@@ -527,7 +562,7 @@ class BMStats(object):
         self._reindex()
 
     def add_cm(self, cm):
-        stats, zones = cm.populate_model(self.bmgeo)
+        stats, zones = cm.populate_model(self.geo)
         self.add_stats(stats, zones)
 
 def test_zonestats_small():
