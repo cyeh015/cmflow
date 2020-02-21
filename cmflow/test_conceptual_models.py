@@ -51,9 +51,9 @@ class TestCMBlocky(unittest.TestCase):
             case=None,
             chars=ascii_lowercase)
         stats, zones = self.cm_fine.populate_model(bm_geo)
-        # print stats, sum(stats)
+        # print(stats, sum(stats))
         stats, zones = self.cm_coarse.populate_model(bm_geo)
-        # print stats, sum(stats)
+        # print(stats, sum(stats))
 
     def test_shifted(self):
         bm_geo = mulgrid().rectangular(
@@ -67,9 +67,9 @@ class TestCMBlocky(unittest.TestCase):
             case=None,
             chars=ascii_lowercase)
         stats, zones = self.cm_fine.populate_model(bm_geo)
-        print stats, sum(stats)
+        # print(stats, sum(stats))
         stats, zones = self.cm_coarse.populate_model(bm_geo)
-        print stats, sum(stats), zones
+        # print(stats, sum(stats), zones)
 
 if __name__ == '__main__':
     unittest.main()
