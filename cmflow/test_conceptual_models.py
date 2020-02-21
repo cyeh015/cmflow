@@ -1,6 +1,26 @@
 from conceptual_models import *
 import unittest
 
+class TestBMStats(unittest.TestCase):
+    def setUp(self):
+        self.geo = mulgrid().rectangular(
+            [10.] * 10,
+            [10.] * 10,
+            [10.] * 10,
+            convention=0,
+            atmos_type=2, # no atm blocks
+            origin=[0,0,0],
+            justify='r',
+            case=None,
+            chars=ascii_lowercase)
+
+    def test_init(self):
+        self.assertEqual(len(self.geo.block_name_list), 1000)
+        bms = BMStats(self.geo)
+        self.assertEqual(bms.bmgeo, self.geo)
+        self.assertEqual(bms.stats.shape, (1000, 0)) # np.array (num_blocks, num_zones)
+        self.assertEqual(bms.zones, [])
+
 class TestCMBlocky(unittest.TestCase):
     def setUp(self):
         cm_geo = mulgrid().rectangular(
