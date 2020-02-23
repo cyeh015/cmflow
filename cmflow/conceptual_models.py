@@ -93,7 +93,16 @@ class LeapfrogGM(object):
             self.litholist = data['zones']
             self.blocklitho = data['blocks']
 
-class CM_Blocky(object):
+class CM(object):
+    def populate_model(self):
+        raise NotImplementedError
+
+    def calc_bmstats(self, geo):
+        stats, zones = self.populate_model(geo)
+        bms = BMStats(geo=geo, stats=stats, zones=zones)
+        return bms
+
+class CM_Blocky(CM):
     """ A nceptual Model object is a model that represents a space by a list of
     zones (usually exists as a blocky model, each block has a *rocktype*). """
     def __init__(self, geo, grid):
@@ -259,7 +268,7 @@ class CM_Blocky(object):
         return stats, self.zones
 
 
-class CM_Prism(object):
+class CM_Prism(CM):
     def __init__(self, name, polygon, ztop, zbottom):
         """ create a conceptual mode
         """
@@ -335,7 +344,7 @@ class CM_Prism(object):
         return stats, [self.name]
 
 
-class CM_Faults(object):
+class CM_Faults(CM):
     """ Conceptual Model of faults as 3D surface (Face3D *.ts objects)
 
     NOTE this simplements the simple way of getting blocks crossed by faults.

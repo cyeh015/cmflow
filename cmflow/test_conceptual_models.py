@@ -123,6 +123,10 @@ class TestCMBlocky(unittest.TestCase):
             chars=ascii_lowercase)
         stats, zones = self.cm_fine.populate_model(bm_geo)
         # print(stats, sum(stats))
+        bms_fine = self.cm_fine.calc_bmstats(bm_geo)
+        self.assertTrue(np.array_equal(bms_fine.stats, stats))
+        self.assertEqual(bms_fine.zones, zones)
+
         stats, zones = self.cm_coarse.populate_model(bm_geo)
         # print(stats, sum(stats))
 
