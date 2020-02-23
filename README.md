@@ -25,32 +25,32 @@ Creates BMStats that can be used later, from Leapfrog Geology:
 
     # (ONLY ONCE) geo used to get geology from Leapfrog geological model
     cmgeo = mulgrid('g_very_fine.dat')
-
+    
     # CSV file created by Leapfrog using cmgeo above
     leapfrog = LeapfrogGM()
     leapfrog.import_leapfrog_csv('grid_gtmp_ay2017_03_6_fit.csv')
-
+    
     cm_geology = CM_Blocky(cmgeo, leapfrog)
-
+    
     # whatever active model we are working on
     bmgeo = mulgrid('gwaixx_yy.dat')
-
+    
     bms_geology = cm_geology.populate_model(bm_geo)
     bms_geology.save('a.json')
 
 A BMStats object can be reused (very fast) to eg.
 
     bms_geology = BMStats('a.json')
-
+    
     # get a cell's stats
     cs = bms_geology.cellstats['abc12']
-
+    
     # rock that occupies most in cell 'abc12'
     rock_name = bms_geology.zones[np.argmax(cs)]
-
+    
     # how many rock in cell 'abc12'
     n_rock = len(np.nonzero(cs))
-
+    
     # list all rocks in cell 'abc12'
     rocks = [bm_geology.zones[i] for i in np.nonzero(cs)]
 
