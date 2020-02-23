@@ -77,15 +77,15 @@ within the zone.
 .zonestats dict of stats column by zone names
 .cellstats dict of stats row by block name
 
-6 elements, 3 zones
- A    B    C
-0.0, 0.7, 0.3,  -> row sum to 1.0, element 0, 0.7 rock B, 0.3 rock C 
-1.0, 0.0, 0.0, 
-1.0, 0.0, 0.0, 
-0.0, 0.5, 0.5, 
-0.1, 0.2, 0.7, 
-0.0, 1.0, 0.0, 
-(this is only one way of using it, such as a rocktype)
+    6 elements, 3 zones
+     A    B    C
+    0.0, 0.7, 0.3,  -> row sum to 1.0, element 0, 0.7 rock B, 0.3 rock C 
+    1.0, 0.0, 0.0, 
+    1.0, 0.0, 0.0, 
+    0.0, 0.5, 0.5, 
+    0.1, 0.2, 0.7, 
+    0.0, 1.0, 0.0, 
+    (this is only one way of using it, such as a rocktype)
 
 .stats, numpy array (n * m), n number of geometry cells, m number of zones
 .zones, a list of zone name, eg. geology rock names, fault names etc
