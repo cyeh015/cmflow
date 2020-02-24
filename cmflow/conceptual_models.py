@@ -518,6 +518,14 @@ class BMStats(object):
             self.stats = np.zeros((n, len(self.zones))) # 'empty' array, ready to concatenate etc
         self._reindex()
 
+    def __repr__(self):
+        r = []
+        sh = self.stats.shape
+        r.append('BMStats with {} zones and {} cells'.format(sh[1], sh[0]))
+        if self.filename:
+            r.append(", file '{}'".format(self.filename))
+        return ''.join(r)
+
     def _reindex(self):
         if self.stats.shape != (self.geo.num_blocks, len(self.zones)):
             raise BMStatsError('.stats shape {} mismatches (.geo.num_blocks, len(.zones)) {}'.format(self.stats.shape, (self.geo.num_blocks, len(self.zones))))
@@ -543,6 +551,7 @@ class BMStats(object):
             data["geometry"] = self.geo.filename
         with open(filename, 'w') as f:
             json.dump(data, f, indent=True, sort_keys=True)
+        self.filename = filename
 
     def load(self, filename, load_geo=True):
         import os.path
@@ -559,6 +568,7 @@ class BMStats(object):
             msg1 = 'Loaded BMStats has different number of blocks to geometry file.'
             msg2 = 'BMStats (%i) != Geometry (%i)' % (n, self.geo.num_blocks)
             raise BMStatsError('\n'.join([msg1, msg2]))
+        self.filename = filename
         self._reindex()
 
     def add_zone(self, zone, stats):
