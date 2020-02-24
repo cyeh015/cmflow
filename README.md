@@ -35,7 +35,7 @@ Creates BMStats that can be used later, from Leapfrog Geology:
     # whatever active model we are working on
     bmgeo = mulgrid('gwaixx_yy.dat')
     
-    bms_geology = cm_geology.populate_model(bm_geo)
+    bms_geology = cm_geology.calc_bmstats(bm_geo)
     bms_geology.save('a.json')
 
 A BMStats object can be reused (very fast) to eg.
