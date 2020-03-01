@@ -19,12 +19,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      id: install
       run: |
-        echo env PATH = $PATH
-        echo "::add-path::~"
-        echo env PATH = $PATH
-        echo ------------------------------------------------
         sudo apt-get install -y libgeos-c1v5
         sudo apt-get install -y libspatialindex-dev
         python -m pip install --upgrade pip
@@ -43,11 +38,10 @@ jobs:
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        TEST: ${{ steps.install.env.PATH }}
-        TEST2: ${{ env.HOME }}
+        TEST3: ${{ env.HOME }}
       run: |
-        echo env TEST = $TEST
-        echo env TEST2 = $TEST2
-        echo env PATH = $PATH
+        echo old p = $PATH
+        PATH=~:$PATH; export PATH
+        echo new p = $PATH
         python -c "import sys; print(sys.version)"
         python -m unittest discover -v
