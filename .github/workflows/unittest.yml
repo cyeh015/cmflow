@@ -44,8 +44,10 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         TEST: ${{ steps.install.env.PATH }}
+        TEST2: ${{ env.HOME }}
       run: |
         echo env TEST = $TEST
+        echo env TEST2 = $TEST2
         echo env PATH = $PATH
         python -c "import sys; print(sys.version)"
         python -m unittest discover -v
