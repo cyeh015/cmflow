@@ -21,9 +21,8 @@ jobs:
     - name: Install dependencies
       id: install
       run: |
-        echo env TEST = $TEST
         echo env PATH = $PATH
-        echo "::add-path::/path/to/dir"
+        echo "::add-path::~"
         echo env PATH = $PATH
         echo ------------------------------------------------
         sudo apt-get install -y libgeos-c1v5
@@ -47,8 +46,6 @@ jobs:
         TEST: ${{ steps.install.env.PATH }}
       run: |
         echo env TEST = $TEST
-        echo env PATH = $PATH
-        ::add-path::~/
         echo env PATH = $PATH
         python -c "import sys; print(sys.version)"
         python -m unittest discover -v
