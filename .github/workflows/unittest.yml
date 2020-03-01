@@ -39,7 +39,7 @@ jobs:
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-       T EST: ${{ steps.install.env.PATH }}
+        TEST: ${{ steps.install.env.PATH }}
       run: |
         echo env TEST = $TEST
         python -c "import sys; print(sys.version)"
