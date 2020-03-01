@@ -23,7 +23,7 @@ jobs:
       run: |
         echo env TEST = $TEST
         echo env PATH = $PATH
-        ::add-path::~/
+        echo "::add-path::/path/to/dir"
         echo env PATH = $PATH
         echo ------------------------------------------------
         sudo apt-get install -y libgeos-c1v5
