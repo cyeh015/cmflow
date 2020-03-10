@@ -6,7 +6,6 @@ import numpy as np
 # for blocky CM
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
-from rtree import index
 
 # for faults CM
 from geom_3dface_utils import Face3D
@@ -156,6 +155,7 @@ class CM_Blocky(CM):
         element is a (varying length) list of cm columns that intersects bm
         column.
         """
+        from rtree import index
         if self._inter_areas is not None and self._bm_col_ccis is not None:
             return self._inter_areas, self._bm_col_ccis
 
@@ -398,6 +398,7 @@ class CM_Faults(CM):
         def column_polygons(geo):
             # CM usually has larger number of columns and is regular, so I should
             # probably do RTree on CM grid
+            from rtree import index
             column_idx = index.Index()
             column_polys = [Polygon([n.pos for n in c.node]) for c in geo.columnlist]
             print_wall_time('    constructed all %i column polygons' % geo.num_columns, loop_stop=True)
