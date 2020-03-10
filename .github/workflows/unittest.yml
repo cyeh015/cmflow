@@ -20,6 +20,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        echo ----- old p = $PATH
+        PATH=~:$PATH; export PATH
+        echo ----- new p = $PATH
         sudo apt-get install -y libgeos-c1v5
         sudo apt-get install -y libspatialindex-dev
         python -m pip install --upgrade pip
@@ -35,6 +38,10 @@ jobs:
         pip install .
         cd ..
     - name: Unit tests
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
+        echo ----- cehck p = $PATH
         python -c "import sys; print(sys.version)"
         python -m unittest discover -v
