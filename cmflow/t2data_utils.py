@@ -297,6 +297,42 @@ def update_block_geology(dat, blk_name, rock_name):
         print '      new rocktype added: ', new_rock_name
     return new_rock_name
 
+def setup_rockless(grid, base_rocktype=None, atm_rocktype=None):
+    """ initialise t2grid with each block having its own rocktype (block
+    name).
+
+    All block's rocktype will be initialised as the same property as
+    base_rocktype.  If base_rocktype is not specified, each block's property
+    will be the same as the block in the original t2grid.
+
+    Setting atm_rocktype to a valid rocktype will collate/combine all
+    atmospheric blocks to use the atm_rocktype.
+    """
+    ATM_VOLUME = 1.0e25 # blocks with volume above this will be ATMOS
+    from copy import deepcopy
+    # remove original block-rocktype assignement (keep rocktype for use)
+    keep_rocks = grid.rocktype
+    grid.rocktypelist = []
+    grid.rocktype = {}
+    # add ATMOS
+    if atm_rocktype is not None:
+        grid.add_rocktype(atm_rocktype)
+    for i,b in enumerate(grid.blocklist):
+        if atm_rocktype is not None and b.volume >= ATM_VOLUME or b.volume < 0.0:
+                rt = atm_rocktype
+        else:
+            if base_rocktype is not None:
+                rt = deepcopy(base_rocktype)
+                rt.name = b.name
+            else:
+                rt = deepcopy(b.rocktype)
+                rt.name = b.name
+
+        # setting the block
+        b.rocktype = rt
+        grid.add_rocktype(rt)
+    return grid
+
 def create_basic_t2data(geo, parameter={}, multi={}, others={}):
     dat = t2data()
     simul = 'AUTOUGH2.2'
