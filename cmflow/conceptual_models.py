@@ -93,11 +93,11 @@ class LeapfrogGM(object):
             self.blocklitho = data['blocks']
 
 class CM(object):
-    def populate_model(self):
+    def populate_model(self, np_dtype):
         raise NotImplementedError
 
-    def calc_bmstats(self, geo):
-        stats, zones = self.populate_model(geo)
+    def calc_bmstats(self, geo, np_dtype=np.single):
+        stats, zones = self.populate_model(geo, np_dtype)
         bms = BMStats(geo=geo, stats=stats, zones=zones)
         return bms
 
@@ -202,7 +202,7 @@ class CM_Blocky(CM):
         self._inter_lengths, self._bm_lay_clis = lengths, bm_lay_clis
         return lengths, bm_lay_clis
 
-    def populate_model(self, geo):
+    def populate_model(self, geo, np_dtype=np.single):
         """ This is the core of the CM processing, fill-in the stats array.
 
         stats array rows are of base model blocks, and columns of the zones from
@@ -216,7 +216,7 @@ class CM_Blocky(CM):
         print_wall_time('  layer_intersect_length() finished: ',
                         loop_stop=True)
 
-        stats = np.zeros((geo.num_blocks, self.num_zones))
+        stats = np.zeros((geo.num_blocks, self.num_zones), dtype=np_dtype)
         print_wall_time('  created stats array %i x %i' % (geo.num_blocks, self.num_zones), loop_stop=True)
 
         def setup_block_name_index_fast(geo):
@@ -293,7 +293,7 @@ class CM_Prism(CM):
             lengths[i] = bm_line.intersection(cm_line).length
         return lengths
 
-    def populate_model(self, bm_geo):
+    def populate_model(self, bm_geo, np_dtype=np.single):
         """ This is the core of the CM processing, fill-in the stats array.
 
         stats array rows are of base model blocks, and columns of the zones from
@@ -326,7 +326,7 @@ class CM_Prism(CM):
         inter_lengths = self.layer_intersect_length(bm_geo)
         print_wall_time('  layer_intersect_length() finished: ', loop_stop=True)
 
-        stats = np.zeros((bm_geo.num_blocks, 1))
+        stats = np.zeros((bm_geo.num_blocks, 1), dtype=np_dtype)
 
         bm_idx = setup_block_name_index_fast(bm_geo)
         print_wall_time('  created col/lay idx for BM (new method)', loop_stop=True)
@@ -385,7 +385,7 @@ class CM_Faults(CM):
             raise Exception
         self.num_zones = len(self.zones)
 
-    def populate_model(self, geo):
+    def populate_model(self, geo, np_dtype=np.single):
 
         def column_intersect_area(dilated_line, bm_geo):
             bm_polys = geo_column_polygon(bm_geo)
@@ -432,7 +432,7 @@ class CM_Faults(CM):
                         bi += 1
             return block_ij_idx
 
-        stats = np.zeros((geo.num_blocks, self.num_zones))
+        stats = np.zeros((geo.num_blocks, self.num_zones), dtype=np_dtype)
         col_polys, col_idx = column_polygons(geo)
         block_ij_idx = setup_block_name_index_fast(geo)
         print_wall_time('  setup_block_name_index_fast()', loop_stop=True)
@@ -486,7 +486,8 @@ class BMStats(object):
     .zonestats dict of stats column by zone names
     .cellstats dict of stats row by block name
     """
-    def __init__(self, filename=None, geo=None, stats=None, zones=None):
+    def __init__(self, filename=None, geo=None, stats=None, zones=None,
+                 np_dtype=np.single):
         """
         Usage:
             # will load: .json .npy and geometry file
@@ -516,7 +517,7 @@ class BMStats(object):
         if zones is None:
             self.zones = []
         if stats is None:
-            self.stats = np.zeros((n, len(self.zones))) # 'empty' array, ready to concatenate etc
+            self.stats = np.zeros((n, len(self.zones)), dtype=np_dtype) # 'empty' array, ready to concatenate etc
         self._reindex()
 
     def __repr__(self):
