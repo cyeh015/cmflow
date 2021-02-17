@@ -53,9 +53,11 @@ A BMStats object can be reused (very fast) to eg.
     
     # list all rocks in cell 'abc12'
     rocks = [bm_geology.zones[i] for i in np.nonzero(cs)]
-
-
-
+    
+    # find all blocks intersect with the zone
+    blocks, ratios = bm_geology.blocks_in_zone('BASE1')
+    block_idx, ratios = bm_geology.blocks_in_zone('BASE1', indices=True)
+    
 
 # BMStats
 

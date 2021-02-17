@@ -599,6 +599,30 @@ class BMStats(object):
         stats, zones = cm.populate_model(self.geo)
         self.add_stats(stats, zones)
 
+    def blocks_in_zone(self, zone, indices=False):
+        """ Returns a tuple of (blocks, ratios).  blocks is a list of all blocks
+        intersect the zone and ratios are portions of each respective block's
+        intersection with the zone.  If indices is set to True, block indices
+        are returned instead of block names.
+
+        It is assumed self.geo is a laoded mulgrid object.
+
+        Ratios calculation assumes the whole zone is fully within the BM.
+        """
+        nis = np.nonzero(self.zonestats[zone])[0]
+        nvs, nbs = [], []
+        for i in nis:
+            b_name = self.geo.block_name_list[i]
+            b_lay = self.geo.layer[self.geo.layer_name(b_name)]
+            b_col = self.geo.column[self.geo.column_name(b_name)]
+            nvs.append(self.geo.block_volume(b_lay, b_col) * self.zonestats[zone][i])
+            nbs.append(b_name)
+        nrs = [v/sum(nvs) for v in nvs]
+        if indices:
+            return nis, nrs
+        else:
+            return nbs, nrs
+
 def test_zonestats_small():
     from t2data_utils import create_basic_t2data, update_block_geology
     START = [time.time()]
