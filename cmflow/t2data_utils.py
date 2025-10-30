@@ -112,6 +112,34 @@ def add_mass_geners(geo, dat, fconfig,
             total_gx += gx
     return dat, total_gx
 
+def pt_at_altitude(h, t0c, temp_elev=None):
+    """
+        simple pressure/temperature - elevation relation that is probably
+        okay for most real world geothermal cases, it is assumed humidity
+        is 0% (dry air):
+          h          : elevation in m
+          t0c        : sea level temperature in degree C
+          temp_elev  : optional, if specified, then t0c is temp at the
+                       specified elevation
+    """
+    p0 = 101325    # pressure at sea level, Pa
+    L = 0.0065     # temperature lapse rate, K/m, valid 0-11,000 masl
+    g = 9.80665    # earth-surface gravity
+    M = 0.0289644  # molar mass of dry air, kg/mol
+    R = 8.31447    # universal gas constant, J/(mol*K)
+    # if elevation of temperature specified
+    # eg. 10 degC at 2000m means t0c=10.0, temp_elev=2000.0 -> t0 = 23.0
+    if temp_elev:
+        t0 = t0c + L * temp_elev + 273.15
+    else:
+        t0 = t0c + 273.15 # sea level temperature in K (Kelvin)
+    # from math import exp
+    # return p0 * exp( - (g*M*h)/(R*t0) )
+    from math import pow
+    p = p0 * pow( (1.0-(L*h)/t0), (g*M)/(R*L) )
+    t = (t0 - L*h) - 273.15
+    return p,t
+
 def enthalpy(t_or_p,ph='liq'):
     """ Return enthalpy kJ/kg ('liq', 'vap', or 'dif') of water at specified
         temperature (<=500.0 in degC) or pressu (>500.0 in Pa) """
