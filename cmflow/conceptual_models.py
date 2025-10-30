@@ -8,10 +8,9 @@ from shapely.geometry import Polygon
 from shapely.geometry import LineString
 
 # for faults CM
-from geom_3dface_utils import Face3D
-#
-from geom_surface_utils import get_columns_intersect_polygon
-from geom_surface_utils import geo_column_polygon
+from cmflow.geom_3dface_utils import Face3D
+from cmflow.geom_surface_utils import get_columns_intersect_polygon
+from cmflow.geom_surface_utils import geo_column_polygon
 
 import json
 import time
@@ -20,9 +19,9 @@ START = [time.time()]
 def print_wall_time(msg, loop_stop=False, total=False):
     t = time.time()
     if total:
-        print msg, ': %f seconds' % (t - START[0])
+        print(msg, ': %f seconds' % (t - START[0]))
     else:
-        print msg, ': %f seconds' % (t - START[-1])
+        print(msg, ': %f seconds' % (t - START[-1]))
     if loop_stop:
         START.append(t)
 
@@ -62,13 +61,13 @@ class LeapfrogGM(object):
                 self.litholist.append(row[2])
                 lithocodes[int(row[1])] = len(self.litholist)-1
             if read_block_litho:
-                if len(row) <> 2: break
+                if len(row) != 2: break
                 self.blocklitho[row[0]] = lithocodes[int(row[1])]
         f.close()
         self.import_from = filename
         if report:
-            print '%8s Lithology found.' % len(self.litholist)
-            print '%8s Blocks allocated.' % len(self.blocklitho)
+            print('%8s Lithology found.' % len(self.litholist))
+            print('%8s Blocks allocated.' % len(self.blocklitho))
 
     def write(self, filename):
         with open(filename, 'w') as f:
@@ -365,7 +364,7 @@ class CM_Faults(CM):
         if isinstance(dilation, float):
             if dilation > 0.0:
                 self.dilation = dilation
-                print 'Fault uses dilation'
+                print('Fault uses dilation')
         if faults is None:
             pass
         elif isinstance(faults, list):
@@ -446,7 +445,7 @@ class CM_Faults(CM):
                 if len(pts) < 2:
                     # not enough points to construct LineString, layer not
                     # cutting through the fault Face
-                    print "    skipping layer %i '%s' with fault '%s'" % (jj, lay.name, fname)
+                    print("    skipping layer %i '%s' with fault '%s'" % (jj, lay.name, fname))
                     continue
                 line = LineString([tuple(pt[:2]) for pt in pts])
                 if self.dilation is not None:
@@ -623,139 +622,6 @@ class BMStats(object):
         else:
             return nbs, nrs
 
-def test_zonestats_small():
-    from t2data_utils import create_basic_t2data, update_block_geology
-    START = [time.time()]
-    geo = mulgrid().rectangular([1000]*20, [1000]*20, [100]*5, origin=[0,0,0],
-                                 atmos_type=0)
-    stats = BMStats(geo)
-    poly = Polygon([
-        np.array([1147.7 , 14125.4]),
-        np.array([487.0  , 13041.7]),
-        np.array([302.0  , 11799.4]),
-        np.array([592.7  , 10372.2]),
-        np.array([1412.1 , 8389.8]),
-        np.array([1993.5 , 7808.4]),
-        np.array([2865.8 , 7729.1]),
-        np.array([3685.1 , 7544.1]),
-        np.array([3975.9 , 6460.4]),
-        np.array([4002.3 , 3262.2]),
-        np.array([3923.0 , 2020.0]),
-        np.array([3685.1 , 1094.9]),
-        np.array([5720.3 , 275.5]),
-        np.array([6645.4 , 381.3]),
-        np.array([7914.1 , 698.4]),
-        np.array([9156.3 , 857.0]),
-        np.array([9922.8 , 804.2]),
-        np.array([11693.7, 1676.4]),
-        np.array([12486.6, 2786.5]),
-        np.array([12539.5, 4927.4]),
-        np.array([13913.9, 7121.2]),
-        np.array([13543.9, 8680.6]),
-        np.array([11376.5, 8574.9]),
-        np.array([9473.5 , 8522.0]),
-        np.array([8072.7 , 8944.9]),
-        np.array([7121.1 , 10160.7]),
-        np.array([6989.0 , 11244.4]),
-        np.array([6856.8 , 11905.2]),
-        np.array([5641.0 , 13041.7]),
-        np.array([4980.2 , 13358.9]),
-        np.array([3711.6 , 14204.7]),
-        np.array([3262.2 , 14733.3]),
-        np.array([1967.1 , 14812.6]),
-        np.array([1359.2 , 14389.7]),
-        ])
-    ztop, zbot = 0.0, -100.0
-    cm = CM_Prism('resis', poly, ztop, zbot)
-    stats.add_cm(cm)
-    ztop, zbot = -200.0, -300.0
-    cm = CM_Prism('resis', poly, ztop, zbot)
-    stats.add_cm(cm)
-    stats.save('tmp_cm.json')
-    stats_2 = BMStats(geo)
-    stats_2.load('tmp_cm.json')
-    # check if the same
-    assert stats.zones == stats_2.zones
-    assert np.array_equal(stats.stats, stats_2.stats)
-    dat = create_basic_t2data(geo)
-
-    # starting with single rock deflt
-    orig_name = dat.grid.rocktypelist[0].name
-    dat.grid.rename_rocktype(orig_name, 'NA   ') # not in geological model
-    # ATMOS
-    for i in range(dat.grid.num_atmosphere_blocks):
-        update_block_geology(dat, dat.grid.blocklist[i].name, 'ATMOS')
-    # others
-    for i in range(dat.grid.num_atmosphere_blocks, dat.grid.num_blocks):
-        zi = np.argmax(stats.stats[i,:])
-        if stats.stats[i,zi] > 0.0:
-            # print CM_0_stats[i,zi], CM_0_stats[i,:]
-            new_rname = update_block_geology(dat, dat.grid.blocklist[i].name, stats.zones[0])
-    geo.write('gtmp.dat')
-    dat.write('tmp.dat')
-
-def test_cm_blocky_full():
-    START = [time.time()]
-
-    leapfrog = LeapfrogGM(geometry='gtmp_ay2017_03_6')
-    leapfrog.import_leapfrog_csv('grid_gtmp_ay2017_03_6_fit.csv')
-    leapfrog.write('_leapfrog.json')
-    print_wall_time('loaded leapfrog GM', loop_stop=True)
-
-    geo = mulgrid('gtmp_ay2017_03_6_fit.dat')
-    print_wall_time('loaded CM geo', loop_stop=True)
-
-    bm_geo = mulgrid('gtmp_ay2017_05_5a.dat')
-    print_wall_time('loaded CM geo and BM geo', loop_stop=True)
-
-    print '  CM has %i blocks: %s' % (geo.num_blocks, geo.filename)
-    print '  BM has %i blocks: %s' % (bm_geo.num_blocks, bm_geo.filename)
-
-    cm = CM_Blocky(geo, leapfrog)
-    stats, zones = cm.populate_model(bm_geo)
-
-    print_wall_time('Finished all, total wall time:', total=True)
-
-    print np.nonzero(stats)
-    np.save('_CM_results.npy', stats)
-
-    with open('_CM_results.json', 'w') as f:
-        json.dump({
-                    "comments": [
-                        "CM (leapfrog): " + leapfrog.import_from,
-                        "CM geometry: " + geo.filename,
-                        "BM geometry: " + bm_geo.filename,
-                    ],
-                    "zones": zones,
-                    "stats": stats.tolist(),
-                  }, f, indent=4, sort_keys=True)
-
-
-def test_cm_fault_full():
-    import glob
-    START = [time.time()]
-
-    bm_geo = mulgrid('gtmp_ay2017_05_5a.dat')
-    print_wall_time('loaded BM geo', loop_stop=True)
-    print '  BM has %i blocks: %s' % (bm_geo.num_blocks, bm_geo.filename)
-
-    cm_f = CM_Faults(sorted(glob.glob('*.ts')))
-    print_wall_time('loaded faults CM w/ %i faults' % cm_f.num_zones, loop_stop=True)
-
-    stats, zones = cm_f.populate_model(bm_geo)
-    print_wall_time('Finished all, total wall time:', total=True)
-
-    save_as = '_CM_faults_results'
-    print np.nonzero(stats)
-    np.save(save_as + '.npy', stats)
-    with open(save_as + '.json', 'w') as f:
-        json.dump({
-                    "comments": [
-                        "BM geometry: " + bm_geo.filename,
-                    ],
-                    "zones": zones,
-                    "stats": stats.tolist(),
-                  }, f, indent=4, sort_keys=True)
 
 
 if __name__ == '__main__':

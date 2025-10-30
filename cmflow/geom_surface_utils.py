@@ -16,17 +16,21 @@ GRAY = '#999999'
 BLACK = '#000000'
 
 def load_feature(filename):
-    with open(filename, 'r') as f:
-        data = json.load(f)
-        if data['type'] == 'Feature':
-            g = shape(data['geometry'])
-            meta = {
-                'filename': filename,
-                'type': data['type'],
-                'properties': data['properties'],
-                'id': data['id']
-            }
-            return g, meta
+    print(filename, type(filename))
+    if isinstance(filename, str):
+        with open(filename, 'r') as f:
+            data = json.load(f)
+    elif isinstance(filename, dict):
+        data = filename
+    if data['type'] == 'Feature':
+        g = shape(data['geometry'])
+        meta = {
+            'filename': filename,
+            'type': data['type'],
+            'properties': data['properties'],
+            # 'id': data['id']
+        }
+        return g, meta
 
 def geo_column_polygon(geo, col_name='', cache_shapely=True):
     """ Returns a shapely Polygon object of the column specified by name.
@@ -92,10 +96,10 @@ def snap(sorted_vals, value, direction=None, minimum=None, allow_outside=False):
         raise Exception("Direction of snapping has to be None, 'down', or 'up'")
     if allow_outside:
         if value < sorted_vals[0]:
-            print "value %f outside range, snapped to %f" % (value, sorted_vals[0])
+            print("value %f outside range, snapped to %f" % (value, sorted_vals[0]))
             return sorted_vals[0]
         if value > sorted_vals[-1]:
-            print "value %f outside range, snapped to %f" % (value, sorted_vals[-1])
+            print("value %f outside range, snapped to %f" % (value, sorted_vals[-1]))
             return sorted_vals[-1]
     else:
         if value < sorted_vals[0] or value > sorted_vals[-1]:
@@ -140,6 +144,12 @@ def find_wet_columns(geo, features, keep_polygons=False):
     polygons = []
     ### go through features
     for feature in features:
+        if 'file' in feature:
+            shp, meta = load_feature(feature['file'])
+        elif 'type' in feature:
+            shp, meta = load_feature(feature)
+        else:
+            raise Exception
         shp, meta = load_feature(feature['file'])
         cols, pors, polys = get_columns_intersect_polygon(shp, geo,
             threshold=feature['threshold'])
@@ -190,7 +200,7 @@ def line_cross_polygon(line, polygon):
             return (0.0, 1.0)
         else:
             # line not crossing/inside the column, use project point
-            print 'line not crossing/inside the column, use project point'
+            print('line not crossing/inside the column, use project point')
             nd = line.project(polygon.centroid, normalized=True)
             return (nd, nd)
     else:
@@ -241,7 +251,7 @@ def plot_point(ob):
     plt.plot(x, y, 'o', color='#999999', zorder=1)
 
 def plot_bounds(ob):
-    x, y = zip(*list((p.x, p.y) for p in ob.boundary))
+    x, y = list(zip(*list((p.x, p.y) for p in ob.boundary)))
     plt.plot(x, y, 'o', color='#000000', zorder=1)
 
 def plot_line(ob, color='#6699cc', alpha=0.3, linewidth=3):
@@ -279,7 +289,7 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                 if col in overwrite:
                     new_z = overwrite[col]
                     del overwrite[col]
-                    print col, '->', new_z
+                    print(col, '->', new_z)
                 liq_h = feature['depth']  # wet atm depth
                 nb_min = new_z
                 for nb_col in geo.column[col].neighbour:
@@ -300,7 +310,7 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                 if col in overwrite:
                     new_z = overwrite[col]
                     del overwrite[col]
-                    print col, '->', new_z
+                    print(col, '->', new_z)
                 liq_h = feature['elevation'] - new_z
                 nb_min = feature['elevation']
                 for nb_col in geo.column[col].neighbour:
@@ -311,7 +321,7 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                 geo.column[col].surface = new_z
                 wet_cols[col] = (liq_h, feature['name'])
         elif feature['type'] == 'cascade':
-            print '+++', feature['name']
+            print('+++', feature['name'])
             plt.clf()
 
             cen_line, meta = load_feature(feature['centreline_file'])
@@ -341,7 +351,7 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                 if col in overwrite:
                     new_z = overwrite[col]
                     del overwrite[col]
-                    print col, '->', new_z
+                    print(col, '->', new_z)
                 liq_h = water_top - new_z  # wet atm depth
                 nb_min = water_top
                 for nb_col in geo.column[col].neighbour:
@@ -357,8 +367,8 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
                 plot_col_surface(col, cen_line.length*nd1, cen_line.length*nd2,
                                  water_top, new_z, bottom)
                 plt.ylim(bottom, None)
-                print "Column '%s' from river %.2f -- %.2f, %.2f" % (col, nd1, nd2, water_top),
-                print new_z, bottom
+                print("Column '%s' from river %.2f -- %.2f, %.2f" % (col, nd1, nd2, water_top), end=' ')
+                print(new_z, bottom)
 
 
             plt.gcf().set_size_inches(10., 10.)
@@ -375,7 +385,7 @@ def process_wet_columns(geo, features, feature_columns, overwrite={}):
         # dry columns
         if col.name in overwrite:
             new_z = overwrite[col.name]
-            print col.name, '-->', new_z
+            print(col.name, '-->', new_z)
         else:
             if col.name in column_mins:
                 new_z = snap(layer_tops, col.surface, None, column_mins[col.name])
@@ -424,7 +434,7 @@ if __name__ == '__main__':
     ### plotting the results of snapping
     v_top_bycol, v_i_bycol = {}, {}
     for col in geo.columnlist:
-        if col.name not in wet_cols.keys() + column_mins.keys():
+        if col.name not in list(wet_cols.keys()) + list(column_mins.keys()):
             continue
         v_i_bycol[col.name] = col.num_layers
         v_top_bycol[col.name] = col.surface

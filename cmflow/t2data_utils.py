@@ -18,7 +18,7 @@ def modify_wellname(mod,original):
     """ modifying well name according to rules: any '*' characters in mod
     will be keep original name, otherwise overwritten by mod. """
     newname = []
-    for i in xrange(5):
+    for i in range(5):
         if mod[i] == '*':
             newname.append(original[i])
         else:
@@ -41,9 +41,9 @@ def add_heat_geners(geo, dat, fconfig,
         data = json.load(f)
 
     zone_cols = {}
-    for zn,zpoly in data["ZonePolygon"].iteritems():
-        if zn not in data["HeatFlux"].keys():
-            print "skip unused zone %s" % zn
+    for zn,zpoly in data["ZonePolygon"].items():
+        if zn not in list(data["HeatFlux"].keys()):
+            print("skip unused zone %s" % zn)
             continue
         zone_cols[zn] = geo.columns_in_polygon(zpoly)
 
@@ -81,15 +81,15 @@ def add_mass_geners(geo, dat, fconfig,
     with open(fconfig, 'r') as f:
         data = json.load(f)
     zone_cols = {}
-    for zn,zpoly in data["ZonePolygon"].iteritems():
-        if zn not in data["Upflow"].keys():
-            print "skip unused zone %s" % zn
+    for zn,zpoly in data["ZonePolygon"].items():
+        if zn not in list(data["Upflow"].keys()):
+            print("skip unused zone %s" % zn)
             continue
         zpoly = [np.array(zz) for zz in zpoly]
         zone_cols[zn] = geo.columns_in_polygon(zpoly)
     layername = geo.layerlist[-1].name
     total_gx = 0.0
-    for name,area in data["Upflow"].iteritems():
+    for name,area in data["Upflow"].items():
         blocks = [geo.block_name(layername,col.name) for col in zone_cols[name]]
         if only_blocks is not None:
             pat = re.compile(only_blocks)
@@ -141,20 +141,20 @@ def pt_at_altitude(h, t0c, temp_elev=None):
     return p,t
 
 def enthalpy(t_or_p,ph='liq'):
-    """ Return enthalpy kJ/kg ('liq', 'vap', or 'dif') of water at specified
+    """ Return enthalpy J/kg ('liq', 'vap', or 'dif') of water at specified
         temperature (<=500.0 in degC) or pressu (>500.0 in Pa) """
     import t2thermo
     def enth(t,p,f):
         d,u = f(t,p)
         return u + p/d
-    def hlhs((t,p)):
+    def hlhs(t,p):
         return enth(t,p,t2thermo.cowat), enth(t,p,t2thermo.supst)
     def sat_tp(t_or_p):
         if t_or_p > 500.0:
             return t2thermo.tsat(t_or_p), t_or_p
         else:
             return t_or_p, t2thermo.sat(t_or_p)
-    (hl,hs) = hlhs(sat_tp(t_or_p))
+    (hl,hs) = hlhs(*sat_tp(t_or_p))
     # xxxx
     return {'liq': hl,'vap': hs,'dif': hs-hl}[ph]
 
@@ -230,7 +230,7 @@ def create_rain_geners(geo, config):
     else:
         offset = 0.0
     if 'TimedRainFall yr,mm/yr' in config:
-        times, rains = zip(*config['TimedRainFall yr,mm/yr'])
+        times, rains = list(zip(*config['TimedRainFall yr,mm/yr']))
         times, rains = np.array(times), np.array(rains)
         times = (times - offset) * 60.*60.*24.*365.25
         enths = np.ones_like(rains)
@@ -291,7 +291,7 @@ def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
                     new_rock.permeability[i] = dat.grid.block[b].rocktype.permeability[i]
 
             dat.grid.add_rocktype(new_rock)
-            print '      new rocktype added: ', new_rock.name
+            print('      new rocktype added: ', new_rock.name)
             dat.grid.block[b].rocktype = new_rock
         else:
             dat.grid.block[b].rocktype = dat.grid.rocktype[r_name]
@@ -305,7 +305,7 @@ def update_block_geology(dat, blk_name, rock_name):
         """ both should be 5 chars long, and new can contain '+' """
         final = ''
         for i in range(5):
-            if new[i] <> '+':
+            if new[i] != '+':
                 final += new[i]
             else:
                 final += orig[i]
@@ -322,7 +322,7 @@ def update_block_geology(dat, blk_name, rock_name):
         new_rock.name = new_rock_name
         dat.grid.add_rocktype(new_rock)
         dat.grid.block[blk_name].rocktype = new_rock
-        print '      new rocktype added: ', new_rock_name
+        print('      new rocktype added: ', new_rock_name)
     return new_rock_name
 
 def setup_rockless(grid, base_rocktype=None, atm_rocktype=None):

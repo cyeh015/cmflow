@@ -169,13 +169,13 @@ class Face3D(object):
         done = False
         for line in f:
             if line.startswith('HEADER'):
-                line = f.next()
+                line = next(f)
                 while '}' not in line:
                     c = line.strip().split(':')
                     self.header[c[0]] = c[1]
-                    line = f.next()
+                    line = next(f)
             elif line.startswith('TFACE'):
-                print 'Reading TFACE...',
+                print('Reading TFACE...', end=' ')
                 for line in f:
                     if line.startswith('PVRTX'):
                         c = line.strip().split()
@@ -194,7 +194,7 @@ class Face3D(object):
                 pass
         f.close()
         if done:
-            print 'Done.'
+            print('Done.')
 
     def __repr__(self):
         if 'name' in self.header:
@@ -244,14 +244,14 @@ class Face3D(object):
         # cur_ep can be either a segment or a point
         if isect['itype'] == (0,2):
             # two edges crosses plane
-            ks = isect['crosses'].keys()
+            ks = list(isect['crosses'].keys())
             cur_ep, other_end_ep = ks[0], ks[1]
         elif isect['itype'] == (2,0):
             # two corners on plane
             cur_ep, other_end_ep = isect['corners'][0], isect['corners'][1]
         else:
             # one corner on plane, one edge crosses plane
-            ks = isect['crosses'].keys()
+            ks = list(isect['crosses'].keys())
             cur_ep, other_end_ep = isect['corners'][0], ks[0]
 
         line = [self.get_intersection_co(other_end_ep, isect), self.get_intersection_co(cur_ep, isect)]
@@ -297,7 +297,7 @@ class Face3D(object):
 
             isect = self.cached_tri_intersections[nbs[0].index]
             exits = []
-            for ex in isect['crosses'].keys() + isect['corners']:
+            for ex in list(isect['crosses'].keys()) + isect['corners']:
                 if isinstance(cur_ep, tuple):
                     if ex in [cur_ep, cur_ep[::-1]]:
                         continue
