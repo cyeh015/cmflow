@@ -1,0 +1,34 @@
+[build-system]
+requires = ["pbr>=6.1.1"]
+build-backend = "pbr.build"
+
+[project]
+name = "cmflow"
+description = "Building TOUGH2/Waiwera models from layers of conceptual models"
+authors = [
+    {name = "Angus Yeh", email = "a.yeh@auckland.ac.nz"},
+]
+dynamic = ["version"]
+requires-python = ">=3.11"
+classifiers = [
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+readme = "README.md"
+dependencies = [
+    "shapely",
+    "rtree",
+    "descartes",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/cyeh015/cmflow"
+"Source Code" = "https://github.com/cyeh015/cmflow"
+
+[tool.setuptools]
+packages = ["cmflow"]
