@@ -23,7 +23,6 @@ readme = "README.md"
 dependencies = [
     "shapely",
     "rtree",
-    "descartes",
     "PyTOUGH",
 ]
 

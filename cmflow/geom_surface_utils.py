@@ -1,11 +1,11 @@
 from mulgrids import *
 from matplotlib import pyplot as plt
-from descartes import PolygonPatch
 
 from shapely.geometry import shape
 from shapely.geometry import Point
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
+from shapely.plotting import patch_from_polygon
 
 import json
 import unittest
@@ -224,7 +224,7 @@ def plot_features(geo, features, polygons=None,
         if polygons:
             shp, col_polys = polygons[i]
             # plot feature and label
-            patch = PolygonPatch(shp, fc=GRAY, ec=GRAY, alpha=0.3, zorder=2)
+            patch = patch_from_polygon(shp, fc=GRAY, ec=GRAY, alpha=0.3, zorder=2)
             plt.gca().add_patch(patch)
             plt.gca().text(shp.centroid.x, shp.centroid.y, feature['name'],
                            verticalalignment='center',
@@ -232,7 +232,7 @@ def plot_features(geo, features, polygons=None,
                            color=GRAY)
             # plot columns that feature intersects
             for p in col_polys:
-                patch = PolygonPatch(p, fc=BLUE, ec=BLUE, alpha=0.3, zorder=2)
+                patch = patch_from_polygon(p, fc=BLUE, ec=BLUE, alpha=0.3, zorder=2)
                 plt.gca().add_patch(patch)
     for c in geo.columnlist:
         if c.name in column_texts:
@@ -243,7 +243,7 @@ def interp_z(x, z1, z2):
     return z1 + x * (z2-z1)
 
 def plot_polygon(ob, fc='#999999', alpha=0.5):
-    patch = PolygonPatch(ob, facecolor=fc, alpha=alpha, zorder=2)
+    patch = patch_from_polygon(ob, facecolor=fc, alpha=alpha, zorder=2)
     plt.gca().add_patch(patch)
 
 def plot_point(ob):
@@ -261,11 +261,11 @@ def plot_line(ob, color='#6699cc', alpha=0.3, linewidth=3):
 
 def plot_col_surface(cname, d1, d2, z, surf, bottom):
     p = Polygon([(d1,bottom),(d1,surf),(d2,surf),(d2,bottom)])
-    patch = PolygonPatch(p, facecolor='#999999', alpha=0.5, zorder=2)
+    patch = patch_from_polygon(p, facecolor='#999999', alpha=0.5, zorder=2)
     plt.gca().add_patch(patch)
 
     p = Polygon([(d1,surf),(d1,z),(d2,z),(d2,surf)])
-    patch = PolygonPatch(p, edgecolor='blue', alpha=0.2, zorder=1)
+    patch = patch_from_polygon(p, edgecolor='blue', alpha=0.2, zorder=1)
     plt.gca().add_patch(patch)
 
     plt.text((d1+d2)*0.5, z, "%s\n%.2f" % (cname, z),

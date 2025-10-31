@@ -4,20 +4,16 @@
 
 # Install Dependency
 
-On Windows, `Shapely` and `Rtree` are easier to be installed by using Christoph Gohlke's non-official build: 
+On most platforms, you should be able to install these packages by:
 
-- [https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely)
-- [https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree](https://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree)
-
-`descartes` can be installed on all platform by:
-
-    pip install descartes
+    pip install shapely
+    pip install rtree
+    pip install pytough
 
 On Linux (Ubuntu shown here) these can be installed via apt-get:
 
     sudo apt-get install -y python-shapely
     sudo apt-get install -y python-rtree
-    sudo apt-get install -y python-descartes
 
 # Example
 
