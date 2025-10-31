@@ -113,9 +113,9 @@ def snap(sorted_vals, value, direction=None, minimum=None, allow_outside=False):
         elif sorted_vals[i+1] == value:
             ix = i + 1
         elif sorted_vals[i] < value < sorted_vals[i+1]:
-            if direction is 'down':
+            if direction == 'down':
                 ix = i
-            elif direction is 'up':
+            elif direction == 'up':
                 ix = i + 1
             else:
                 dists = [abs(sorted_vals[i] - value), abs(sorted_vals[i+1] - value)]
@@ -175,21 +175,22 @@ def line_cross_polygon(line, polygon):
     p_start = Point(*line.coords[0])
     p_end = Point(*line.coords[-1])
     splitted = sh_split(line, polygon)
-    ns = len(splitted)
+    geoms = splitted.geoms
+    ns = len(geoms)
     if ns >= 3:
-        plot_point(Point(*splitted[0].coords[-1]))
-        plot_point(Point(*splitted[-1].coords[0]))
-        x, y = splitted[-1].coords[0]
+        plot_point(Point(*geoms[0].coords[-1]))
+        plot_point(Point(*geoms[-1].coords[0]))
+        x, y = geoms[-1].coords[0]
         plt.plot(x, y, '+', color='red')
-        ndd1 = splitted[0].length / line.length
-        ndd2 = 1.0 - (splitted[-1].length / line.length)
+        ndd1 = geoms[0].length / line.length
+        ndd2 = 1.0 - (geoms[-1].length / line.length)
         return (ndd1, ndd2)
     elif ns == 2:
         if polygon.contains(p_start):
-            ndd = splitted[0].length / line.length
+            ndd = geoms[0].length / line.length
             return (0.0, ndd)
         elif polygon.contains(p_end):
-            ndd = 1 - (splitted[-1].length / line.length)
+            ndd = 1 - (geoms[-1].length / line.length)
             return (ndd, 1.0)
         else:
             raise Exception
@@ -207,7 +208,7 @@ def line_cross_polygon(line, polygon):
         raise Exception
 
 def plot_features(geo, features, polygons=None,
-                  column_names=[], column_texts={}):
+                  column_names=None, column_texts={}):
     """
     polygons is expected to be a list, each element of the list is a tuple of
     (feature shape, [column polygons intersected]). column_names is a list of
@@ -216,10 +217,10 @@ def plot_features(geo, features, polygons=None,
     to print anything.
     """
     geo.layer_plot(plt=plt,
-                   column_names=column_names,
+                   # column_names=column_names,
                    linecolour='b',
                    title=geo.filename,
-                   wells=True, well_names=False)
+                   wells=False, well_names=False)
     for i, feature in enumerate(features):
         if polygons:
             shp, col_polys = polygons[i]
