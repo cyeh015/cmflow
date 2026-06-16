@@ -31,7 +31,7 @@ class LeapfrogGM(object):
         self.litholist = []
         self.blocklitho = {}
         self.import_from = '' # optional, if imported from leapfrog
-        self.geometry = '' # optional, matching mulgrid geometry file
+        self.geometry = geometry # optional, matching mulgrid geometry file
 
     def import_leapfrog_csv(self, filename, report=False):
         """ load geology info from Leapfrog's 'Generate rock types' feature.  The
