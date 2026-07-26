@@ -163,36 +163,36 @@ class Face3D(object):
 
     def read(self, filename):
         # TODO: implement full support, see http://paulbourke.net/dataformats/gocad/gocad.pdf
-        f = open(filename, 'r')
-        if not f.next().startswith('GOCAD TSurf 1'):
-            raise Exception("File type not supported, need .ts file starts with 'GOCAD TSurf 1'.")
-        done = False
-        for line in f:
-            if line.startswith('HEADER'):
-                line = next(f)
-                while '}' not in line:
-                    c = line.strip().split(':')
-                    self.header[c[0]] = c[1]
+        with open(filename, 'r') as f:
+            first_line = f.readline()
+            if not first_line.startswith("GOCAD TSurf 1"):
+                raise ValueError("File type not supported, need .ts file starts with 'GOCAD TSurf 1'.")
+            done = False
+            for line in f:
+                if line.startswith('HEADER'):
                     line = next(f)
-            elif line.startswith('TFACE'):
-                print('Reading TFACE...', end=' ')
-                for line in f:
-                    if line.startswith('PVRTX'):
-                        c = line.strip().split()
-                        self.points[c[1]] = Point(c[1], [float(x) for x in c[2:]])
-                    if line.startswith('TRGL'):
-                        c = line.strip().split()
-                        self.triangles.append(Triangle([self.points[p] for p in c[1:]]))
-                        # add back references
-                        self.triangles[-1].index = len(self.triangles) - 1
-                        for p in c[1:]:
-                            self.points[p].in_triangles.append(self.triangles[-1])
-                    if line.startswith('END'):
-                        done = True
-                        break
-            else:
-                pass
-        f.close()
+                    while '}' not in line:
+                        c = line.strip().split(':')
+                        self.header[c[0]] = c[1]
+                        line = next(f)
+                elif line.startswith('TFACE'):
+                    print('Reading TFACE...', end=' ')
+                    for line in f:
+                        if line.startswith('PVRTX'):
+                            c = line.strip().split()
+                            self.points[c[1]] = Point(c[1], [float(x) for x in c[2:]])
+                        if line.startswith('TRGL'):
+                            c = line.strip().split()
+                            self.triangles.append(Triangle([self.points[p] for p in c[1:]]))
+                            # add back references
+                            self.triangles[-1].index = len(self.triangles) - 1
+                            for p in c[1:]:
+                                self.points[p].in_triangles.append(self.triangles[-1])
+                        if line.startswith('END'):
+                            done = True
+                            break
+                else:
+                    pass
         if done:
             print('Done.')
 
