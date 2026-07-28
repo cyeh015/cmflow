@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7]
+        python-version: [3.13]
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -31,12 +31,7 @@ jobs:
         pip install matplotlib
         pip install shapely
         pip install rtree
-        pip install descartes
-        mkdir pytough
-        cd pytough
-        git clone https://github.com/acroucher/PyTOUGH.git .
-        pip install .
-        cd ..
+        pip install pytough
     - name: Unit tests
       env:
         TWINE_USERNAME: __token__
