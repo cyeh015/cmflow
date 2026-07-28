@@ -115,3 +115,17 @@ objects.  It means the conceptual model is "applied" onto the bm_geo.
 
 
 
+# Build and Publish
+
+To bump version, create a tag, eg. `v0.1.0`
+
+PyPI token is expected in `~/.pypirc`
+
+If upload for the first time, create a PyPI account token, then add the token into `~/.pypirc`. Build and publish as normal, the PyPI project will be created on first upload.  Then revoke the account token.  Create a project token for later publishes.
+
+Publish to PyPI:
+
+```console
+hatch build
+hatch publish
+```

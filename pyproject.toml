@@ -1,6 +1,6 @@
 [build-system]
-requires = ["pbr>=6.1.1"]
-build-backend = "pbr.build"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "cmflow"
@@ -33,5 +33,13 @@ dependencies = [
 "Homepage" = "https://github.com/cyeh015/cmflow"
 "Source Code" = "https://github.com/cyeh015/cmflow"
 
-[tool.setuptools]
-packages = ["cmflow"]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:cmflow tests}"
+
