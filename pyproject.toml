@@ -36,6 +36,10 @@ dependencies = [
 [tool.hatch.version]
 source = "vcs"
 
+# local versions such as -0.3.3.dev0+g87d975348.d20260728 not allowed by PyPI
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
 [tool.hatch.envs.types]
 extra-dependencies = [
   "mypy>=1.0.0",
