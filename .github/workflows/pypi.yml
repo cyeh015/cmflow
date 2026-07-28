@@ -2,8 +2,9 @@ name: Publish on PyPI
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - 'develop'
+      - 'master'
 
 jobs:
   deploy:
