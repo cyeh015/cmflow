@@ -69,6 +69,130 @@ class LeapfrogGM(object):
             print('%8s Lithology found.' % len(self.litholist))
             print('%8s Blocks allocated.' % len(self.blocklitho))
 
+    def split_faults_lithos(self):
+        """ parse Leapfrog's Lithology names and determine the faults and pure
+        lithos
+
+        Observation:
+        - a string can have two parts separated by ', '
+        - if there is only a single part, then it can be pure litho OR faults
+        - if there are two parts, then they are faults and pure litho
+        - faults are one or more faults joined by '+'
+        - fault names are shorteded by removing spaces
+        """
+        if len(self.litholist) == 0:
+            return
+
+        faults, rocks = [], []
+        self.litho_fault_combos = []
+        for lf_litho in self.litholist:
+            parts = lf_litho.split(', ')
+            if len(parts) == 1:
+                if '+' in parts[0]:
+                    fault_parts = parts[0].split('+')
+                    for fault in fault_parts:
+                        if fault not in faults:
+                            faults.append(fault)
+                    self.litho_fault_combos.append(fault_parts)
+                else:
+                    if parts[0] not in rocks:
+                        rocks.append(parts[0])
+                    self.litho_fault_combos.append([])
+
+            elif len(parts) == 2:
+                fault_parts = parts[0].split('+')
+                for fault in fault_parts:
+                    if fault not in faults:
+                        faults.append(fault)
+                self.litho_fault_combos.append(fault_parts)
+
+                if parts[1] not in rocks:
+                    rocks.append(parts[1])
+            else:
+                raise Exception("Unexpected Lithology name format: '%s'" % lf_litho)
+
+        from pprint import pprint as pp
+        # print('---')
+        # print(f'{len(faults)} Faults:')
+        # pp(sorted(faults))
+        # print('---')
+        # print(f'{len(rocks)} Pure Litho:')
+        # pp(sorted(rocks))
+
+        for f in faults:
+            if f in rocks:
+                raise Exception(f"Fault {f} also found in pure litho list")
+        for r in rocks:
+            if r in faults:
+                raise Exception(f"Pure litho {r} also found in fault list")
+
+        self._lf_faults = sorted(faults)
+        self._lf_rocks = sorted(rocks)
+
+    def generate_gmf(self):
+        """ GMF uses:
+        - 1st char pure litho
+        - 2nd char (3rd char is zero) single fault
+        - 3rd char (unique with 2nd char as unique combination of faults)
+        """
+        import string
+        codes = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:] + '@$%&'
+
+        string_to_code = {item: codes[i] for i, item in enumerate(self._lf_faults)}
+        print(string_to_code)
+        codes = codes[len(self._lf_faults):]
+
+        # name combinations
+        combinations = []
+        for litho, combo in zip(self.litholist, self.litho_fault_combos):
+            combo_set = set(combo)
+            if combo_set not in combinations:
+                combinations.append(combo_set)
+
+        unique_combos = {}
+
+        # single item ones first
+        for combo in combinations:
+            if len(combo) == 1:
+                fault = list(combo)[0]
+                code = string_to_code[fault]
+                print(f"Fault {fault} -> code {code}")
+                unique_combos[tuple(sorted(combo))] = code + '0'
+
+        # two items
+        for combo in combinations:
+            if len(combo) == 2:
+                fid = tuple(sorted(combo))
+                unique_combos[fid] = ''
+                for fault in fid:
+                    code = string_to_code[fault]
+                    unique_combos[fid] += code
+                # print(f"{fid} -> {unique_combos[fid]}")
+
+        # three or more - order them first
+        remaining_ids = []
+        for combo in combinations:
+            if len(combo) >= 3:
+                fid = tuple(sorted(combo))
+                remaining_ids.append(fid)
+        remaining_ids = sorted(remaining_ids, key=lambda x: len(x))
+        print(f"{len(remaining_ids)} combinations of 3 or more faults")
+        # use first item code plus remaining code
+        if len(remaining_ids) > len(codes):
+            raise Exception("Not enough characters for remaining fault combinations.")
+        for i,fid in enumerate(remaining_ids):
+            unique_combos[fid] = string_to_code[fid[0]] + codes[i]
+            # print(f"{fid} -> {unique_combos[fid]}")
+        codes = codes[len(remaining_ids):]
+
+
+        from pprint import pprint
+        pprint(remaining_ids)
+        print(f"{len(remaining_ids)}")
+        pprint(unique_combos)
+        pprint(codes)
+
+
     def write(self, filename):
         with open(filename, 'w') as f:
             data = {
