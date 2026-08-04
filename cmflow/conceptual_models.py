@@ -129,69 +129,104 @@ class LeapfrogGM(object):
         self._lf_faults = sorted(faults)
         self._lf_rocks = sorted(rocks)
 
-    def generate_gmf(self):
-        """ GMF uses:
-        - 1st char pure litho
+    def gmf_fault_rocktype_2L(self, fault_codes={}, chars=None, report=False):
+        """ Generates GMF style rocktype names (length of 2) based on faults.
+        Returns a dict of mapping from tuple of faults to GMF rocktype name.
+
+        fault_code is a user-defined dict with keys and values a single char.
+        The order is important, will affect how the final names are sorted.
+        If not specified, the names will be sorted *naturally*.
+
+        GMF uses:
         - 2nd char (3rd char is zero) single fault
-        - 3rd char (unique with 2nd char as unique combination of faults)
+        - 3rd char (combined with 2nd char as unique combination of faults)
         """
         import string
-        codes = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:] + '@$%&'
+        def assign_chars(names, chars=string.ascii_uppercase):
+            """ Assign unique characters to each name.
 
-        string_to_code = {item: codes[i] for i, item in enumerate(self._lf_faults)}
-        print(string_to_code)
-        codes = codes[len(self._lf_faults):]
+            Returns
+            -------
+            tuple(dict, str)
+                A mapping from name to assigned character, and the remaining
+                unused characters.
+            """
+            if len(names) > len(chars):
+                raise Exception("Not enough characters for names")
+            name_index = {n: chars[i] for i, n in enumerate(names)}
+            remaining_chars = chars[len(names):]
+            return name_index, remaining_chars
 
-        # name combinations
-        combinations = []
-        for litho, combo in zip(self.litholist, self.litho_fault_combos):
-            combo_set = set(combo)
-            if combo_set not in combinations:
-                combinations.append(combo_set)
+        def natural_key(text):
+            """ Convert text chunks and number chunks into a tuple of string
+            and int, useful for sorting strings naturally. eg.
 
-        unique_combos = {}
+              data = ["F24", "F8", "F2", "F10"]
+              sorted_data = sorted(data, key=natural_key)
+              print(sorted_data)  # Output: ['F2', 'F8', 'F10', 'F24']
+            """
+            import re
+            return [
+                int(c) if c.isdigit() else c.lower()
+                for c in re.split(r'(\d+)', text)
+            ]
 
-        # single item ones first
-        for combo in combinations:
-            if len(combo) == 1:
-                fault = list(combo)[0]
-                code = string_to_code[fault]
-                print(f"Fault {fault} -> code {code}")
-                unique_combos[tuple(sorted(combo))] = code + '0'
+        if not chars:
+            chars = string.ascii_uppercase + string.ascii_lowercase
+            chars += string.digits[1:] # take out zero because it means no fault
 
-        # two items
-        for combo in combinations:
-            if len(combo) == 2:
-                fid = tuple(sorted(combo))
-                unique_combos[fid] = ''
+        if fault_codes:
+            # some checks and remove used characters
+            for f,c in fault_codes.items():
+                if len(c) != 1:
+                    raise Exception(f"Fault code for {f} must be a single character")
+                if f not in fault_codes:
+                    raise Exception(f"Fault {f} not found in Leapfrog faults list")
+                chars = chars.replace(c, '')
+            # tolerate if user only specifies some of the faults
+            remaining_lf_faults = [f for f in self._lf_faults if f not in fault_codes]
+            new_fault_codes, chars = assign_chars(sorted(remaining_lf_faults, key=natural_key), chars=chars)
+            fault_codes.update(new_fault_codes)
+        else:
+            fault_codes, chars = assign_chars(sorted(self._lf_faults, key=natural_key), chars=chars)
+
+        fault_rank = {name: idx for idx, name in enumerate(fault_codes)}
+
+        # sort combinations: by num of faults, then by ranking of 1st fault, then 2nd...
+        def combo_id(items):
+            # id (a tuple of faults) is also ordered by rank
+            return tuple(sorted(items, key=lambda x: fault_rank.get(x, 0)))
+        combinations = list({combo_id(c) for c in self.litho_fault_combos if c})
+        combinations = sorted(combinations, key=lambda x: (len(x), tuple(fault_rank[y] for y in x)))
+        if report:
+            print(f"{len(self.litho_fault_combos):>8} Leapfrog LithoCode\n"
+                  f"{len(self._lf_faults):>8} Faults\n"
+                  f"{len(combinations):>8} Fault combinations\n")
+
+        final_codes = {}
+        for ci,fid in enumerate(combinations):
+            if len(fid) == 1:
+                # single item ones first -> fault code + '0'
+                final_codes[fid] = fault_codes[fid[0]] + '0'
+            elif len(fid) == 2:
+                # two items combo -> first + second
+                final_codes[fid] = ''
                 for fault in fid:
-                    code = string_to_code[fault]
-                    unique_combos[fid] += code
-                # print(f"{fid} -> {unique_combos[fid]}")
+                    final_codes[fid] += fault_codes[fault]
+            else:
+                # three or more -> first fault code + nunique code
+                if not chars:
+                    need_more = len(combinations) - ci
+                    raise Exception(f"Not enough characters for remaining fault combinations,"
+                                    f" need {need_more} more.")
+                code = chars[0]
+                chars = chars[1:]
+                final_codes[fid] = fault_codes[fid[0]] + code
+            if report:
+                # print(f"{fid} -> {final_codes[fid]}")
+                print(f"{final_codes[fid]} -> ({len(fid)}) {fid}")
 
-        # three or more - order them first
-        remaining_ids = []
-        for combo in combinations:
-            if len(combo) >= 3:
-                fid = tuple(sorted(combo))
-                remaining_ids.append(fid)
-        remaining_ids = sorted(remaining_ids, key=lambda x: len(x))
-        print(f"{len(remaining_ids)} combinations of 3 or more faults")
-        # use first item code plus remaining code
-        if len(remaining_ids) > len(codes):
-            raise Exception("Not enough characters for remaining fault combinations.")
-        for i,fid in enumerate(remaining_ids):
-            unique_combos[fid] = string_to_code[fid[0]] + codes[i]
-            # print(f"{fid} -> {unique_combos[fid]}")
-        codes = codes[len(remaining_ids):]
-
-
-        from pprint import pprint
-        pprint(remaining_ids)
-        print(f"{len(remaining_ids)}")
-        pprint(unique_combos)
-        pprint(codes)
-
+        return final_codes
 
     def write(self, filename):
         with open(filename, 'w') as f:
