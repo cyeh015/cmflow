@@ -99,9 +99,14 @@ class LeapfrogGM(object):
             print('%8s Lithology found.' % len(self.litholist))
             print('%8s Blocks allocated.' % len(self.blocklitho))
 
-    def split_faults_lithos(self):
+    def parse_lithology_names(self):
         """ parse Leapfrog's Lithology names and determine the faults and pure
         lithos
+
+        Returns a list of lithology and a list of faults.
+
+        NOTE Leapfrog remove spaces from fault names, and then truncated into
+             7 characters.  (Lithology names remain.)
 
         Observation:
         - a string can have two parts separated by ', '
@@ -141,14 +146,6 @@ class LeapfrogGM(object):
             else:
                 raise Exception("Unexpected Lithology name format: '%s'" % lf_litho)
 
-        from pprint import pprint as pp
-        # print('---')
-        # print(f'{len(faults)} Faults:')
-        # pp(sorted(faults))
-        # print('---')
-        # print(f'{len(rocks)} Pure Litho:')
-        # pp(sorted(rocks))
-
         for f in faults:
             if f in rocks:
                 raise Exception(f"Fault {f} also found in pure litho list")
@@ -156,8 +153,9 @@ class LeapfrogGM(object):
             if r in faults:
                 raise Exception(f"Pure litho {r} also found in fault list")
 
-        self._lf_faults = sorted(faults)
         self._lf_rocks = sorted(rocks)
+        self._lf_faults = sorted(faults)
+        return self._lf_rocks, self._lf_faults
 
     def gmf_litho_rocktype_1L(self, litho_codes={}, chars=None, report=False):
         """ Generates GMF style rocktype names (length of 1) based on lithologies.
