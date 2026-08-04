@@ -159,6 +159,43 @@ class LeapfrogGM(object):
         self._lf_faults = sorted(faults)
         self._lf_rocks = sorted(rocks)
 
+    def gmf_litho_rocktype_1L(self, litho_codes={}, chars=None, report=False):
+        """ Generates GMF style rocktype names (length of 1) based on lithologies.
+        Returns a dict of mapping from Leapfrog lithology name to GMF rocktype name.
+
+        litho_codes is a user-defined dict with keys and values a single char.
+        The order is important, will affect how the final names are sorted.
+        If not specified, the names will be sorted *naturally*.
+        """
+        if not chars:
+            chars = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:]
+
+        if litho_codes:
+            # some checks and remove used characters
+            for l,c in litho_codes.items():
+                if len(c) != 1:
+                    raise Exception(f"Lithology code for {l} must be a single character")
+                if l not in self._lf_rocks:
+                    raise Exception(f"Lithology {l} not found in Leapfrog lithologies list")
+                chars = chars.replace(c, '')
+            # tolerate if user only specifies some of the lithologies
+            remaining_lf_rocks = [r for r in self._lf_rocks if r not in litho_codes]
+            new_litho_codes, chars = assign_chars(sorted(remaining_lf_rocks, key=natural_key), chars)
+            litho_codes.update(new_litho_codes)
+        else:
+            litho_codes, chars = assign_chars(sorted(self._lf_rocks, key=natural_key), chars)
+
+        if report:
+            print(f"{len(self.litholist):>8} Leapfrog LithoCode\n"
+                  f"{len(litho_codes):>8} Lithology\n")
+            print()
+            for name, code in litho_codes.items():
+                print(f"{code} -> {name}")
+            print()
+            print(litho_codes)
+
+        return litho_codes
+
     def gmf_fault_rocktype_2L(self, fault_codes={}, chars=None, report=False):
         """ Generates GMF style rocktype names (length of 2) based on faults.
         Returns a dict of mapping from tuple of faults to GMF rocktype name.
