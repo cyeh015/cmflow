@@ -14,6 +14,8 @@ from cmflow.geom_surface_utils import geo_column_polygon
 
 import json
 import time
+import string
+import re
 
 START = [time.time()]
 def print_wall_time(msg, loop_stop=False, total=False):
@@ -24,6 +26,34 @@ def print_wall_time(msg, loop_stop=False, total=False):
         print(msg, ': %f seconds' % (t - START[-1]))
     if loop_stop:
         START.append(t)
+
+def assign_chars(names, chars=string.ascii_uppercase):
+    """ Assign unique characters to each name.
+
+    Returns
+    -------
+    tuple(dict, str)
+        A mapping from name to assigned character, and the remaining
+        unused characters.
+    """
+    if len(names) > len(chars):
+        raise Exception("Not enough characters for names")
+    name_index = {n: chars[i] for i, n in enumerate(names)}
+    remaining_chars = chars[len(names):]
+    return name_index, remaining_chars
+
+def natural_key(text):
+    """ Convert text chunks and number chunks into a tuple of string
+    and int, useful for sorting strings naturally. eg.
+
+      data = ["F24", "F8", "F2", "F10"]
+      sorted_data = sorted(data, key=natural_key)
+      print(sorted_data)  # Output: ['F2', 'F8', 'F10', 'F24']
+    """
+    return [
+        int(c) if c.isdigit() else c.lower()
+        for c in re.split(r'(\d+)', text)
+    ]
 
 class LeapfrogGM(object):
     def __init__(self, geometry=''):
@@ -141,36 +171,6 @@ class LeapfrogGM(object):
         - 2nd char (3rd char is zero) single fault
         - 3rd char (combined with 2nd char as unique combination of faults)
         """
-        import string
-        def assign_chars(names, chars=string.ascii_uppercase):
-            """ Assign unique characters to each name.
-
-            Returns
-            -------
-            tuple(dict, str)
-                A mapping from name to assigned character, and the remaining
-                unused characters.
-            """
-            if len(names) > len(chars):
-                raise Exception("Not enough characters for names")
-            name_index = {n: chars[i] for i, n in enumerate(names)}
-            remaining_chars = chars[len(names):]
-            return name_index, remaining_chars
-
-        def natural_key(text):
-            """ Convert text chunks and number chunks into a tuple of string
-            and int, useful for sorting strings naturally. eg.
-
-              data = ["F24", "F8", "F2", "F10"]
-              sorted_data = sorted(data, key=natural_key)
-              print(sorted_data)  # Output: ['F2', 'F8', 'F10', 'F24']
-            """
-            import re
-            return [
-                int(c) if c.isdigit() else c.lower()
-                for c in re.split(r'(\d+)', text)
-            ]
-
         if not chars:
             chars = string.ascii_uppercase + string.ascii_lowercase
             chars += string.digits[1:] # take out zero because it means no fault
