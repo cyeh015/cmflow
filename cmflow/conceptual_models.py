@@ -255,7 +255,9 @@ class LeapfrogGM(object):
 
         final_codes = {}
         for ci,fid in enumerate(combinations):
-            if len(fid) == 1:
+            if len(fid) == 0:
+                final_codes[fid] = '00'
+            elif len(fid) == 1:
                 # single item ones first -> fault code + '0'
                 final_codes[fid] = fault_codes[fid[0]] + '0'
             elif len(fid) == 2:
