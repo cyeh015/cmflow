@@ -174,8 +174,6 @@ class LeapfrogGM(object):
 
         Returns a list of lithology and a list of faults.
 
-        !!! WIP process the leapfrog names TODO replace .parse_lithology_names()
-
         """
         self.lf_lithos = [] # list of LeapfrogLitho objects (ordered as litholist)
         self.lf_block = {} # access LeapfrogLitho objects by block name
@@ -202,67 +200,6 @@ class LeapfrogGM(object):
                 raise Exception(f"Pure litho {r} also found in fault list")
 
         return self.lf_rocks, self.lf_faults
-
-    def parse_lithology_names(self):
-        """ parse Leapfrog's Lithology names and determine the faults and pure
-        lithos
-
-        Returns a list of lithology and a list of faults.
-
-        Writes an internal self.fault_combos, keeping a list of fault_combos,
-        as found in the header, same order as self.litholist
-
-        NOTE Leapfrog remove spaces from fault names, and then truncated into
-             7 characters.  (Lithology names remain.)
-
-        Observation:
-        - a string can have two parts separated by ', '
-        - if there is only a single part, then is pure litho (to be confirmed!?)
-        - if there are two parts, then they are faults and pure litho
-        - faults are one or more faults joined by '+'
-        - fault names are shorteded by removing spaces
-        """
-        if len(self.litholist) == 0:
-            return
-
-        faults, rocks = [], []
-        self.fault_combos = []
-        for lf_litho in self.litholist:
-            parts = lf_litho.split(', ')
-            if len(parts) == 1:
-                if '+' in parts[0]:
-                    fault_parts = parts[0].split('+')
-                    for fault in fault_parts:
-                        if fault not in faults:
-                            faults.append(fault)
-                    self.fault_combos.append(fault_parts)
-                else:
-                    if parts[0] not in rocks:
-                        rocks.append(parts[0])
-                    self.fault_combos.append([])
-
-            elif len(parts) == 2:
-                fault_parts = parts[0].split('+')
-                for fault in fault_parts:
-                    if fault not in faults:
-                        faults.append(fault)
-                self.fault_combos.append(fault_parts)
-
-                if parts[1] not in rocks:
-                    rocks.append(parts[1])
-            else:
-                raise Exception("Unexpected Lithology name format: '%s'" % lf_litho)
-
-        for f in faults:
-            if f in rocks:
-                raise Exception(f"Fault {f} also found in pure litho list")
-        for r in rocks:
-            if r in faults:
-                raise Exception(f"Pure litho {r} also found in fault list")
-
-        self._lf_rocks = sorted(rocks)
-        self._lf_faults = sorted(faults)
-        return self._lf_rocks, self._lf_faults
 
     def gmf_litho_rocktype_1L(self, litho_codes={}, chars=None, ignore=None,
         report=False):
