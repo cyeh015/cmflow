@@ -162,6 +162,7 @@ class LeapfrogGM(object):
 
         if report:
             print("\n".join([
+                f"Loaded from file: {self.import_from}:",
                 f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
                 f"{len(self.lf_block):>8} Blocks allocated",
                 f"{len(self.lf_faults):>8} Faults found",
@@ -375,23 +376,15 @@ class LeapfrogGM(object):
 
         if report:
             print("\n".join([
+                f"Generating GMF fault names:",
                 f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
                 f"{len(self.lf_faults):>8} Faults found",
                 f"{len(final_codes):>8} Total unique fault combinations found",
                 f"{len([fid for fid in final_codes.keys() if len(fid)==1]):>8} Single-fault combinations found",
-                f"{len([fid for fid in final_codes.keys() if len(fid)==2]):>8} Two-fault intersections found",
+                f"{len([fid for fid in final_codes.keys() if len(fid)==2]):>8} Fault intersections found with 2 faults",
                 f"{len([fid for fid in final_codes.keys() if len(fid)>=3]):>8} Fault intersections found with 3 or more faults",
+                f"{max([len(fid) for fid in final_codes.keys()]):>8} Maximum number of fault intersect in one block",
                 ]) + "\n")
-
-            # for fid, code in final_codes.items():
-            #     # print(f"{fid} -> {final_codes[fid]}")
-            #     print(f"{final_codes[fid]} -> ({len(fid)}) {fid}")
-            # from pprint import pprint
-            # pprint(rocktype_fault_index)
-            # print('---')
-            # pprint(rocktype_fault_gmf1)
-            # print('---')
-            # pprint(rocktype_fault_gmf2)
 
         return rocktype_fault_index
 
