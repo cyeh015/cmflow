@@ -271,13 +271,19 @@ class LeapfrogGM(object):
         # sort the dict for nicer output
         rocktype_litho_index = dict(sorted(rocktype_litho_index.items()))
 
+        # GMF contents for _dict_rocktype.json
+        gmf_litho = {
+            "rank": [0],
+            "legend": rocktype_litho_index,
+        }
+
         if report:
             print()
             for code, names in rocktype_litho_index.items():
                 print(f"{code} -> {names}")
             print()
 
-        return rocktype_litho_index
+        return rocktype_litho_index, gmf_litho
 
     def gmf_fault_rocktype_2L(self, fault_codes={}, chars=None, report=False):
         """ Generates GMF style rocktype names (length of 2) based on faults.
@@ -364,7 +370,7 @@ class LeapfrogGM(object):
         rocktype_fault_index = dict(sorted(rocktype_fault_index.items()))
 
         # GMF
-        rocktype_fault_gmf1, rocktype_fault_gmf2 = {}, {}
+        rocktype_fault_gmf1, rocktype_fault_gmf2 = {'0':''}, {'0':''}
         for fid, code in final_codes.items():
             if len(fid) == 1:
                 rocktype_fault_gmf1[code[0]] = fid[0]
@@ -373,6 +379,18 @@ class LeapfrogGM(object):
         # sort the dict for nicer output
         rocktype_fault_gmf1 = dict(sorted(rocktype_fault_gmf1.items()))
         rocktype_fault_gmf2 = dict(sorted(rocktype_fault_gmf2.items()))
+        gmf_fault = {
+            "faults": {
+                "rank": [1],
+                "lengend": rocktype_fault_gmf1,
+                "direction": {f:None for f in rocktype_fault_gmf1.keys()},
+            },
+            "intersections": {
+                "rank": [2],
+                "lengend": rocktype_fault_gmf2,
+                "direction": {f:None for f in rocktype_fault_gmf2.keys()},
+            },
+        }
 
         if report:
             print("\n".join([
@@ -386,7 +404,7 @@ class LeapfrogGM(object):
                 f"{max([len(fid) for fid in final_codes.keys()]):>8} Maximum number of fault intersect in one block",
                 ]) + "\n")
 
-        return rocktype_fault_index
+        return rocktype_fault_index, gmf_fault
 
     def write(self, filename):
         with open(filename, 'w') as f:
