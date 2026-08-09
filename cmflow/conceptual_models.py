@@ -119,6 +119,8 @@ class LeapfrogGM(object):
         # the following provides parsed info of the Leapfrog GM
         self.lf_lithos = [] # list of LeapfrogLitho objects (ordered as litholist)
         self.lf_block = {} # access LeapfrogLitho objects by block name
+        self.rocks = [] # sorted pure lithos found
+        self.faults = [] # sorted faults found
 
     def import_leapfrog_csv(self, filename, report=False):
         """ load geology info from Leapfrog's 'Generate rock types' feature.  The
@@ -155,11 +157,16 @@ class LeapfrogGM(object):
                 self.blocklitho[row[0]] = code_index[int(row[1])]
         f.close()
         self.import_from = filename
-        if report:
-            print('%8s Lithology found.' % len(self.litholist))
-            print('%8s Blocks allocated.' % len(self.blocklitho))
 
         self.parse_lithology()
+
+        if report:
+            print("\n".join([
+                f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
+                f"{len(self.lf_block):>8} Blocks allocated",
+                f"{len(self.lf_faults):>8} Faults found",
+                f"{len(self.lf_rocks):>8} Pure rocks (lithos) found",
+                ]) + "\n")
 
     def parse_lithology(self):
         """ parse Leapfrog's Lithology names and determine the faults and pure
@@ -177,6 +184,24 @@ class LeapfrogGM(object):
             self.lf_lithos.append(lf_litho)
         for block, idx in self.blocklitho.items():
             self.lf_block[block] = self.lf_lithos[idx]
+
+        # compile lists of faults and pure (litho) rocks
+        rocks, faults = set(), set()
+        for litho in self.lf_lithos:
+            if litho.rock is not None:
+                rocks.add(litho.rock)
+            faults.update(litho.faults)
+        self.lf_rocks = sorted(rocks, key=natural_key)
+        self.lf_faults = sorted(faults, key=natural_key)
+
+        for f in self.lf_faults:
+            if f in self.lf_rocks:
+                raise Exception(f"Fault {f} also found in pure litho list")
+        for r in self.lf_rocks:
+            if r in self.lf_faults:
+                raise Exception(f"Pure litho {r} also found in fault list")
+
+        return self.lf_rocks, self.lf_faults
 
     def parse_lithology_names(self):
         """ parse Leapfrog's Lithology names and determine the faults and pure
@@ -239,73 +264,119 @@ class LeapfrogGM(object):
         self._lf_faults = sorted(faults)
         return self._lf_rocks, self._lf_faults
 
-    def gmf_litho_rocktype_1L(self, litho_codes={}, chars=None, report=False):
+    def gmf_litho_rocktype_1L(self, litho_codes={}, chars=None, ignore=None,
+        report=False):
         """ Generates GMF style rocktype names (length of 1) based on lithologies.
-        Returns a dict of mapping from Leapfrog lithology name to GMF rocktype name.
+        Returns a dict of mapping from GMF rocktype name to Leapfrog lithology(s).
 
         litho_codes is a user-defined dict with keys and values a single char.
         The order is important, will affect how the final names are sorted.
-        If not specified, the names will be sorted *naturally*.
+        If not specified, the names will be sorted *naturally*.  Multiple litho
+        names mapping to the same code is allowed (i.e. merging rocktypes).
+
+        chars is a string containing possible characters to use.  NOTE '0' is
+        special in GMF and is reserved, it will be removed from user's chars.
+
+        It is possible to ignore certain lithology by sepcifying names in ignore
+        list.  Note that they will produce GMF rocktype '0'.  There is a default
+        set of ignored litho names, if you want to include them, you will have
+        to set ignore=[].
+
+        Each block's rocktype code (length=1) can be accessed by:
+            GM.lf_block[block_name].rocktype_litho
         """
-        if not chars:
+        if chars is None:
             chars = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:]
+        else:
+            chars.replace('0', '')
+
+        default_ignore = [None, 'Water', 'Unknown', 'Outside Geological Model']
+        if ignore is None:
+            ignore = [ig for ig in default_ignore if ig in self.lf_rocks]
+        else:
+            ignore = [ig for ig in ignore if ig in self.lf_rocks]
 
         if litho_codes:
             # some checks and remove used characters
             for l,c in litho_codes.items():
+                if l in ignore and c != '0':
+                    print(f"Warning: ignoring lithology {l}, "
+                          f"overwrite user-defined litho_codes '{c}' -> '0'")
                 if len(c) != 1:
                     raise Exception(f"Lithology code for {l} must be a single character")
-                if l not in self._lf_rocks:
+                if l not in self.lf_rocks:
                     raise Exception(f"Lithology {l} not found in Leapfrog lithologies list")
                 chars = chars.replace(c, '')
-            # tolerate if user only specifies some of the lithologies
-            remaining_lf_rocks = [r for r in self._lf_rocks if r not in litho_codes]
-            new_litho_codes, chars = assign_chars(sorted(remaining_lf_rocks, key=natural_key), chars)
-            litho_codes.update(new_litho_codes)
-        else:
-            litho_codes, chars = assign_chars(sorted(self._lf_rocks, key=natural_key), chars)
+
+        for ig in ignore:
+            litho_codes[ig] = '0'
+
+        # deal with all other rocks not specified by user
+        remaining_rocks = [r for r in self.lf_rocks if r not in litho_codes]
+        new_litho_codes, chars = assign_chars(sorted(remaining_rocks, key=natural_key), chars)
+        litho_codes.update(new_litho_codes)
+
+        # keep as a property of LeapfrogLitho object
+        for litho in self.lf_lithos:
+            if litho.rock is None:
+                litho.rocktype_litho = '0'
+            else:
+                litho.rocktype_litho = litho_codes[litho.rock]
+
+        # create reverse index for GMF
+        rocktype_litho_index = {}
+        for name, rt in litho_codes.items():
+            if rt not in rocktype_litho_index:
+                rocktype_litho_index[rt] = name
+            else:
+                rocktype_litho_index[rt] += ", " + name
+        # sort the dict for nicer output
+        rocktype_litho_index = dict(sorted(rocktype_litho_index.items()))
 
         if report:
-            print(f"{len(self.litholist):>8} Leapfrog LithoCode\n"
-                  f"{len(litho_codes):>8} Lithology\n")
             print()
-            for name, code in litho_codes.items():
-                print(f"{code} -> {name}")
+            for code, names in rocktype_litho_index.items():
+                print(f"{code} -> {names}")
             print()
-            print(litho_codes)
 
-        return litho_codes
+        return rocktype_litho_index
 
     def gmf_fault_rocktype_2L(self, fault_codes={}, chars=None, report=False):
         """ Generates GMF style rocktype names (length of 2) based on faults.
-        Returns a dict of mapping from tuple of faults to GMF rocktype name.
+        Returns a dict of mapping from GMF rocktype name to tuple of faults.
 
         fault_code is a user-defined dict with keys and values a single char.
         The order is important, will affect how the final names are sorted.
         If not specified, the names will be sorted *naturally*.
 
-        GMF uses:
+        chars is a string containing possible characters to use.  NOTE '0' is
+        special in GMF and is reserved, it will be removed from user's chars.
+
+        GMF uses two characters:
         - 2nd char (3rd char is zero) single fault
         - 3rd char (combined with 2nd char as unique combination of faults)
         """
-        if not chars:
-            chars = string.ascii_uppercase + string.ascii_lowercase
-            chars += string.digits[1:] # take out zero because it means no fault
+        if chars is None:
+            chars = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:]
+        else:
+            chars.replace('0', '')
 
         if fault_codes:
             # some checks and remove used characters
             for f,c in fault_codes.items():
+                if c == '0':
+                    raise Exception(f"Fault code for {f} cannot be '0'")
                 if len(c) != 1:
                     raise Exception(f"Fault code for {f} must be a single character")
                 if f not in fault_codes:
                     raise Exception(f"Fault {f} not found in Leapfrog faults list")
                 chars = chars.replace(c, '')
             # tolerate if user only specifies some of the faults
-            remaining_lf_faults = [f for f in self._lf_faults if f not in fault_codes]
+            remaining_lf_faults = [f for f in self.lf_faults if f not in fault_codes]
             new_fault_codes, chars = assign_chars(sorted(remaining_lf_faults, key=natural_key), chars=chars)
             fault_codes.update(new_fault_codes)
         else:
-            fault_codes, chars = assign_chars(sorted(self._lf_faults, key=natural_key), chars=chars)
+            fault_codes, chars = assign_chars(sorted(self.lf_faults, key=natural_key), chars=chars)
 
         fault_rank = {name: idx for idx, name in enumerate(fault_codes)}
 
@@ -313,16 +384,13 @@ class LeapfrogGM(object):
         def combo_id(items):
             # id (a tuple of faults) is also ordered by rank
             return tuple(sorted(items, key=lambda x: fault_rank.get(x, 0)))
-        combinations = list({combo_id(c) for c in self.fault_combos})
+        # sorting the faults to ensure unique fault sets
+        combinations = list({combo_id(c.faults) for c in self.lf_lithos})
         # sort by combo length, then by rank sequentially in combo
         combinations = sorted(combinations, key=lambda x: (len(x), tuple(fault_rank[y] for y in x)))
-        if report:
-            print(f"{len(self.fault_combos):>8} Leapfrog LithoCode\n"
-                  f"{len(self._lf_faults):>8} Faults\n"
-                  f"{len(combinations):>8} Fault combinations\n")
 
         final_codes = {}
-        for ci,fid in enumerate(combinations):
+        for ii,fid in enumerate(combinations):
             if len(fid) == 0:
                 final_codes[fid] = '00'
             elif len(fid) == 1:
@@ -336,17 +404,59 @@ class LeapfrogGM(object):
             else:
                 # three or more -> first fault code + nunique code
                 if not chars:
-                    need_more = len(combinations) - ci
+                    need_more = len(combinations) - ii
                     raise Exception(f"Not enough characters for remaining fault combinations,"
                                     f" need {need_more} more.")
                 code = chars[0]
                 chars = chars[1:]
                 final_codes[fid] = fault_codes[fid[0]] + code
-            if report:
-                # print(f"{fid} -> {final_codes[fid]}")
-                print(f"{final_codes[fid]} -> ({len(fid)}) {fid}")
 
-        return final_codes
+        for litho in self.lf_lithos:
+            fid = combo_id(litho.faults)
+            litho.rocktype_fault = final_codes[fid]
+            litho.faults_sorted = fid
+
+        # create reverse index for general use (key has two characters)
+        rocktype_fault_index = {}
+        for fid, code in final_codes.items():
+            if code in rocktype_fault_index:
+                raise Exception(f"Should be unique")
+            rocktype_fault_index[code] = ", ".join(fid)
+        # sort the dict for nicer output
+        rocktype_fault_index = dict(sorted(rocktype_fault_index.items()))
+
+        # GMF
+        rocktype_fault_gmf1, rocktype_fault_gmf2 = {}, {}
+        for fid, code in final_codes.items():
+            if len(fid) == 1:
+                rocktype_fault_gmf1[code[0]] = fid[0]
+            elif len(fid) >= 2:
+                rocktype_fault_gmf2[code[1]] = "Intersection " + ", ".join(fid[1:])
+        # sort the dict for nicer output
+        rocktype_fault_gmf1 = dict(sorted(rocktype_fault_gmf1.items()))
+        rocktype_fault_gmf2 = dict(sorted(rocktype_fault_gmf2.items()))
+
+        if report:
+            print("\n".join([
+                f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
+                f"{len(self.lf_faults):>8} Faults found",
+                f"{len(final_codes):>8} Total unique fault combinations found",
+                f"{len([fid for fid in final_codes.keys() if len(fid)==1]):>8} Single-fault combinations found",
+                f"{len([fid for fid in final_codes.keys() if len(fid)==2]):>8} Two-fault intersections found",
+                f"{len([fid for fid in final_codes.keys() if len(fid)>=3]):>8} Fault intersections found with 3 or more faults",
+                ]) + "\n")
+
+            # for fid, code in final_codes.items():
+            #     # print(f"{fid} -> {final_codes[fid]}")
+            #     print(f"{final_codes[fid]} -> ({len(fid)}) {fid}")
+            # from pprint import pprint
+            # pprint(rocktype_fault_index)
+            # print('---')
+            # pprint(rocktype_fault_gmf1)
+            # print('---')
+            # pprint(rocktype_fault_gmf2)
+
+        return rocktype_fault_index
 
     def write(self, filename):
         with open(filename, 'w') as f:
