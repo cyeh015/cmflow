@@ -116,12 +116,15 @@ class LeapfrogGM(object):
 
         Returns a list of lithology and a list of faults.
 
+        Writes an internal self.fault_combos, keeping a list of fault_combos,
+        as found in the header, same order as self.litholist
+
         NOTE Leapfrog remove spaces from fault names, and then truncated into
              7 characters.  (Lithology names remain.)
 
         Observation:
         - a string can have two parts separated by ', '
-        - if there is only a single part, then it can be pure litho OR faults
+        - if there is only a single part, then is pure litho (to be confirmed!?)
         - if there are two parts, then they are faults and pure litho
         - faults are one or more faults joined by '+'
         - fault names are shorteded by removing spaces
@@ -130,7 +133,7 @@ class LeapfrogGM(object):
             return
 
         faults, rocks = [], []
-        self.litho_fault_combos = []
+        self.fault_combos = []
         for lf_litho in self.litholist:
             parts = lf_litho.split(', ')
             if len(parts) == 1:
@@ -139,18 +142,18 @@ class LeapfrogGM(object):
                     for fault in fault_parts:
                         if fault not in faults:
                             faults.append(fault)
-                    self.litho_fault_combos.append(fault_parts)
+                    self.fault_combos.append(fault_parts)
                 else:
                     if parts[0] not in rocks:
                         rocks.append(parts[0])
-                    self.litho_fault_combos.append([])
+                    self.fault_combos.append([])
 
             elif len(parts) == 2:
                 fault_parts = parts[0].split('+')
                 for fault in fault_parts:
                     if fault not in faults:
                         faults.append(fault)
-                self.litho_fault_combos.append(fault_parts)
+                self.fault_combos.append(fault_parts)
 
                 if parts[1] not in rocks:
                     rocks.append(parts[1])
@@ -242,10 +245,11 @@ class LeapfrogGM(object):
         def combo_id(items):
             # id (a tuple of faults) is also ordered by rank
             return tuple(sorted(items, key=lambda x: fault_rank.get(x, 0)))
-        combinations = list({combo_id(c) for c in self.litho_fault_combos if c})
+        combinations = list({combo_id(c) for c in self.fault_combos})
+        # sort by combo length, then by rank sequentially in combo
         combinations = sorted(combinations, key=lambda x: (len(x), tuple(fault_rank[y] for y in x)))
         if report:
-            print(f"{len(self.litho_fault_combos):>8} Leapfrog LithoCode\n"
+            print(f"{len(self.fault_combos):>8} Leapfrog LithoCode\n"
                   f"{len(self._lf_faults):>8} Faults\n"
                   f"{len(combinations):>8} Fault combinations\n")
 
