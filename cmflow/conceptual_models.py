@@ -369,7 +369,7 @@ class LeapfrogGM(object):
         # sort the dict for nicer output
         rocktype_fault_index = dict(sorted(rocktype_fault_index.items()))
 
-        # GMF
+        # GMF contents for _dict_rocktype.json
         rocktype_fault_gmf1, rocktype_fault_gmf2 = {'0':''}, {'0':''}
         for fid, code in final_codes.items():
             if len(fid) == 1:
@@ -388,7 +388,7 @@ class LeapfrogGM(object):
             "intersections": {
                 "rank": [2],
                 "lengend": rocktype_fault_gmf2,
-                "direction": {f:None for f in rocktype_fault_gmf2.keys()},
+                "direction": {f:None for f in rocktype_fault_index.keys()},
             },
         }
 
