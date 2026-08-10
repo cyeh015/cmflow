@@ -296,7 +296,7 @@ def update_rocktype_bycopy(dat, blk_names, to_rocktype, convention='++***'):
         else:
             dat.grid.block[b].rocktype = dat.grid.rocktype[r_name]
 
-def update_block_geology(dat, blk_name, rock_name):
+def update_block_geology(dat, blk_name, rock_name, report=False):
     """ only updates the block's rocktype name.  rock_name is a 5 chars string,
     can contain '+' character to indicate preservin that part of name.  If the
     final rocktype name does not exist in dat.grid, it will be created by
@@ -322,7 +322,8 @@ def update_block_geology(dat, blk_name, rock_name):
         new_rock.name = new_rock_name
         dat.grid.add_rocktype(new_rock)
         dat.grid.block[blk_name].rocktype = new_rock
-        print('      new rocktype added: ', new_rock_name)
+        if report:
+            print('      new rocktype added: ', new_rock_name)
     return new_rock_name
 
 def setup_rockless(grid, base_rocktype=None, atm_rocktype=None):
