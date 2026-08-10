@@ -382,12 +382,12 @@ class LeapfrogGM(object):
         gmf_fault = {
             "faults": {
                 "rank": [1],
-                "lengend": rocktype_fault_gmf1,
+                "legend": rocktype_fault_gmf1,
                 "direction": {f:None for f in rocktype_fault_gmf1.keys()},
             },
             "intersections": {
                 "rank": [2],
-                "lengend": rocktype_fault_gmf2,
+                "legend": rocktype_fault_gmf2,
                 "direction": {f:None for f in rocktype_fault_index.keys()},
             },
         }
