@@ -109,9 +109,9 @@ class FaultRocktypes:
     display name - user can have custom full name for display
     rocktype name - characters (usually 2 in GMF) is the key used as part of rocktype naming
 
-    .set_rocktype() expects a rocktype code map to tuples of fault leapfrog names
-    .set_direction() expects a dict mapping fault leapfrog names to int direction (or None)
-    .set_display_name() expects a dict mapping fault leapfrog names to display/full names
+    .set_rocktypes() expects a rocktype code map to tuples of fault leapfrog names
+    .set_directions() expects a dict mapping fault leapfrog names to int direction (or None)
+    .set_display_names() expects a dict mapping fault leapfrog names to display/full names
     """
     def __init__(self, leapfrog_names):
         # initialise with a list of fault full names (as in)
@@ -130,12 +130,12 @@ class FaultRocktypes:
         # here user can overwrite specific rocktype direction
         self.user_rocktype_dir = {} # user overwrite fault dir for combos
 
-    def set_display_name(self, display_name):
+    def set_display_names(self, display_name):
         """ display_name is a dict mapping leapfrog names to display/full names
         """
         self.display_name = display_name
 
-    def set_rocktype(self, rock_table):
+    def set_rocktypes(self, rock_table):
         """ rock_table is dict mapping rocktype code to tuple of leapfrog names
 
         This is usually constructed using something like .gmf_fault_rocktype_2L()
@@ -143,17 +143,17 @@ class FaultRocktypes:
         """
         self.rocktype_faults = rock_table
 
-    def set_direction(self, fault_dir):
+    def set_directions(self, fault_dir):
         """ fault_dir is a dict mapping leapfrog names to int direction (or None)
         """
         self.fault_dir = fault_dir
 
-    def get_rock_fault_dir(self, rocktype_name, warn=True):
+    def get_rock_fault_dir(self, rocktype_name, warn=False):
         """ return the rocktype fault direction """
         if not self.fault_dir and warn:
-            raise Exception("Fault direction not set, see .set_direction()")
+            raise Exception("Fault direction not set, see .set_directions()")
         if not self.rocktype_faults and warn:
-            raise Exception("Fault table not set, see .set_rocktype()")
+            raise Exception("Fault table not set, see .set_rocktypes()")
 
         # return user specified if specified
         try:
@@ -500,7 +500,7 @@ class LeapfrogGM(object):
 
         # create FaultRocktypes object to return
         fault_rocktypes = FaultRocktypes(self.lf_faults)
-        fault_rocktypes.set_rocktype(rocktype_index)
+        fault_rocktypes.set_rocktypes(rocktype_index)
 
         if report:
             print("\n".join([
