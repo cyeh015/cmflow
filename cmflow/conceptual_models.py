@@ -100,6 +100,134 @@ class LeapfrogLitho():
             raise Exception("Unexpected Lithology name format: '%s'" % lf_litho)
 
 
+class FaultRocktypes:
+    """ obj that keeps fault info of created rocktypes (usually 2 chars in GMF)
+
+    As more information is loaded, the registery becomes more useful.
+
+    leapfrog name - names Leapfrog uses in the exported rocktype .csv
+    display name - user can have custom full name for display
+    rocktype name - characters (usually 2 in GMF) is the key used as part of rocktype naming
+
+    .set_rocktype() expects a rocktype code map to tuples of fault leapfrog names
+    .set_direction() expects a dict mapping fault leapfrog names to int direction (or None)
+    .set_display_name() expects a dict mapping fault leapfrog names to display/full names
+    """
+    def __init__(self, leapfrog_names):
+        # initialise with a list of fault full names (as in)
+        self.lf_faults = leapfrog_names
+
+        self.display_name = {}
+        self.rocktype_faults = {}
+        self.fault_dir = {}
+
+        # normally rocktype fault direction are worked out using individual
+        # fault direction of faults in this rocktype:
+        #   if single fault -> fault dir
+        #   if all faults same dir -> fault dir
+        #   if some faults not specified -> None
+        #   if intersected by faults with multiple direction -> None
+        # here user can overwrite specific rocktype direction
+        self.user_rocktype_dir = {} # user overwrite fault dir for combos
+
+    def set_display_name(self, display_name):
+        """ display_name is a dict mapping leapfrog names to display/full names
+        """
+        self.display_name = display_name
+
+    def set_rocktype(self, rock_table):
+        """ rock_table is dict mapping rocktype code to tuple of leapfrog names
+
+        This is usually constructed using something like .gmf_fault_rocktype_2L()
+        from LeapfrogGM object.
+        """
+        self.rocktype_faults = rock_table
+
+    def set_direction(self, fault_dir):
+        """ fault_dir is a dict mapping leapfrog names to int direction (or None)
+        """
+        self.fault_dir = fault_dir
+
+    def get_rock_fault_dir(self, rocktype_name, warn=True):
+        """ return the rocktype fault direction """
+        if not self.fault_dir and warn:
+            raise Exception("Fault direction not set, see .set_direction()")
+        if not self.rocktype_faults and warn:
+            raise Exception("Fault table not set, see .set_rocktype()")
+
+        # return user specified if specified
+        try:
+            return self.user_rocktype_dir[rocktype_name]
+        except KeyError:
+            pass
+
+        # otherwise work out by using individual faults
+        directions = [self.fault_dir.get(f, None) for f in self.rocktype_faults[rocktype_name]]
+        if len(directions) == 1:
+            return directions[0]
+        elif len(set(directions)) == 1:
+            return next(iter(directions))
+        else:
+            return None
+
+    def export_gmf_v0(self):
+        """ export a section of the GMF _dict_rocktypes.json that deals with
+            faults
+        """
+        # GMF contents for _dict_rocktype.json
+        gmf1, gmf2 = {'0':''}, {'0':''}
+        for rocktype, faults in self.rocktype_faults.items():
+            if len(faults) == 1:
+                gmf1[rocktype[0]] = faults[0]
+            elif len(faults) >= 2:
+                gmf2[rocktype[1]] = "Intersection " + ", ".join(rocktype[1:])
+        # sort the dict for nicer output
+        gmf1 = dict(sorted(gmf1.items()))
+        gmf2 = dict(sorted(gmf2.items()))
+        gmf_fault = {
+            "faults": {
+                "rank": [1],
+                "legend": gmf1,
+                "direction": {f:None for f in gmf1.keys()},
+                "color": {rt[:1]: None for rt, fs in self.rocktype_faults.items() if len(fs)==1},
+            },
+            "intersections": {
+                "rank": [2],
+                "legend": gmf2,
+                "direction": {rt:self.get_rock_fault_dir(
+                    rt, warn=False) for rt in self.rocktype_faults.keys()},
+            },
+        }
+        return gmf_fault
+
+    def export_gmf_convention(self, rank=[1, 2]):
+        """ export a section of the GMF _dict_rocktypes.json that deals with
+            faults
+
+        NOTE This is a proposed new _dict_rocktype.json format.  I think this
+             has a few advantages over the orginal (v0) format:
+             + less assumptions is made about convention
+             + flexibility for change in convention less likely to break toolchain
+             + more information can be logically stored
+        """
+        gmf_fault = {
+            "faults": {
+                "rank": rank, # default to [1,2] ie. 2nd and 3rd character
+                # WIP
+                "data": {
+                    "leapfrog_names": self.lf_faults,
+                    "display_names": self.display_name,
+                    "rocktype_faults": self.rocktype_faults,
+                    "fault_dir": self.fault_dir,
+                },
+                # framework needs extras
+                "legend": {rt: ", ".join(fs) for rt, fs in self.rocktype_faults.items()},
+                "color": {rt: None for rt, fs in self.rocktype_faults.items() if len(fs)==1},
+            },
+        }
+        return gmf_fault
+
+
 class LeapfrogGM(object):
     """ Tough2 Block Lithology Output generated by Leapfrog Energy (.csv)
 
@@ -355,42 +483,24 @@ class LeapfrogGM(object):
                 chars = chars[1:]
                 final_codes[fid] = fault_codes[fid[0]] + code
 
+        # useful properties added to LeapfrogLitho objects
         for litho in self.lf_lithos:
             fid = combo_id(litho.faults)
-            litho.rocktype_fault = final_codes[fid]
-            litho.faults_sorted = fid
+            litho.rocktype_fault = final_codes[fid] # eg. 'AB', 'A0', '00'
+            litho.faults_sorted = fid # eg. ('Fault1', 'Fault2')
 
         # create reverse index for general use (key has two characters)
-        rocktype_fault_index = {}
-        for fid, code in final_codes.items():
-            if code in rocktype_fault_index:
-                raise Exception(f"Should be unique")
-            rocktype_fault_index[code] = ", ".join(fid)
+        rocktype_index = {}
+        for faults, rocktype_name in final_codes.items():
+            if rocktype_name in rocktype_index:
+                raise Exception(f"Rocktype Name should be unique, {rocktype_name} repeated")
+            rocktype_index[rocktype_name] = faults
         # sort the dict for nicer output
-        rocktype_fault_index = dict(sorted(rocktype_fault_index.items()))
+        rocktype_index = dict(sorted(rocktype_index.items()))
 
-        # GMF contents for _dict_rocktype.json
-        rocktype_fault_gmf1, rocktype_fault_gmf2 = {'0':''}, {'0':''}
-        for fid, code in final_codes.items():
-            if len(fid) == 1:
-                rocktype_fault_gmf1[code[0]] = fid[0]
-            elif len(fid) >= 2:
-                rocktype_fault_gmf2[code[1]] = "Intersection " + ", ".join(fid[1:])
-        # sort the dict for nicer output
-        rocktype_fault_gmf1 = dict(sorted(rocktype_fault_gmf1.items()))
-        rocktype_fault_gmf2 = dict(sorted(rocktype_fault_gmf2.items()))
-        gmf_fault = {
-            "faults": {
-                "rank": [1],
-                "legend": rocktype_fault_gmf1,
-                "direction": {f:None for f in rocktype_fault_gmf1.keys()},
-            },
-            "intersections": {
-                "rank": [2],
-                "legend": rocktype_fault_gmf2,
-                "direction": {f:None for f in rocktype_fault_index.keys()},
-            },
-        }
+        # create FaultRocktypes object to return
+        fault_rocktypes = FaultRocktypes(self.lf_faults)
+        fault_rocktypes.set_rocktype(rocktype_index)
 
         if report:
             print("\n".join([
@@ -404,7 +514,7 @@ class LeapfrogGM(object):
                 f"{max([len(fid) for fid in final_codes.keys()]):>8} Maximum number of fault intersect in one block",
                 ]) + "\n")
 
-        return rocktype_fault_index, gmf_fault
+        return fault_rocktypes
 
     def write(self, filename):
         with open(filename, 'w') as f:
