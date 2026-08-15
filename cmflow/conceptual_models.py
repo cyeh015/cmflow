@@ -100,6 +100,34 @@ class LeapfrogLitho():
             raise Exception("Unexpected Lithology name format: '%s'" % lf_litho)
 
 
+class MethodProxy:
+    """ A reusable proxy that maps dictionary syntax to any Python method.
+
+    eg.
+        For a class with methods get_value(key) and set_value(key, value), you
+        can create a proxy like this:
+            @property
+            def rock(self):
+                return MethodProxy(getter_method=self.get_rock,
+                                   setter_method=self.set_rock)
+        This enables use:
+            obj.rock['AB'] = 4
+            print(obj.rock['AB'])
+    """
+    def __init__(self, getter_method, setter_method=None):
+        self._getter = getter_method
+        self._setter = setter_method
+
+    def __getitem__(self, key):
+        # Calls the passed-in getter method dynamically
+        return self._getter(key)
+
+    def __setitem__(self, key, value):
+        if self._setter is None:
+            raise TypeError("This property is read-only")
+        self._setter(key, value)
+
+
 class FaultRocktypes:
     """ obj that keeps fault info of created rocktypes (usually 2 chars in GMF)
 
@@ -122,12 +150,8 @@ class FaultRocktypes:
         self.fault_dir = {}
 
         # normally rocktype fault direction are worked out using individual
-        # fault direction of faults in this rocktype:
-        #   if single fault -> fault dir
-        #   if all faults same dir -> fault dir
-        #   if some faults not specified -> None
-        #   if intersected by faults with multiple direction -> None
-        # here user can overwrite specific rocktype direction
+        # fault direction of faults in this rocktype, here user can overwrite
+        # specific rocktype direction
         self.user_rocktype_dir = {} # user overwrite fault dir for combos
 
     def set_display_names(self, display_name):
@@ -148,8 +172,29 @@ class FaultRocktypes:
         """
         self.fault_dir = fault_dir
 
+    @property
+    def direction(self):
+        """ User can access direction by simply:
+            print(a_faultrocktypes.direction['AB'])  # returns the direction of rocktype 'AB'
+            a_faultrocktypes.direction['AB'] = 2 # user specify direction
+        """
+        return MethodProxy(getter_method=self.get_rock_fault_dir,
+                           setter_method=self.set_rock_fault_dir)
+
+    def set_rock_fault_dir(self, rocktype_name, direction):
+        if rocktype_name not in self.rocktype_faults:
+            raise Exception(f"Rocktype {rocktype_name} not found in FaultRocktypes.")
+        self.user_rocktype_dir[rocktype_name] = direction
+
     def get_rock_fault_dir(self, rocktype_name, warn=False):
-        """ return the rocktype fault direction """
+        """ return the rocktype fault direction
+
+        Working out direction if not overwritten with self.user_rocktype_dir:
+          if single fault -> fault dir
+          if all faults same dir -> fault dir
+          if some faults not specified -> None
+          if intersected by faults with multiple direction -> None
+        """
         if not self.fault_dir and warn:
             raise Exception("Fault direction not set, see .set_directions()")
         if not self.rocktype_faults and warn:

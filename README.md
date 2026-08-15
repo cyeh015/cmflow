@@ -37,6 +37,8 @@ print(litho.rock) # pure lithology/formation name
 
 ```
 
+## Faults from Leapfrog
+
 It is also possible to automatically generate rocktype naming to be used in
 AUT2/Waiwera based on certain rules.  Here is an example that generate TWO
 letter codes that represents either no fault, single fault or multiple faults
@@ -54,9 +56,50 @@ code = gm.lf_block['xyz12'].rocktype_fault
 # TWO character code that can be used as part of the rocktype naming
 ```
 
-The method `.gmf_fault_rocktype_2L()` also generates a FaultRocktypes object.
+The method `.gmf_fault_rocktype_2L()` also generates a `FaultRocktypes` object.
 FaultRocktypes serves as a central registry for the fault related rocktype
-naming convention.  This can be saved and loaded for alter use.  For example, finding out what a certain rocktype ...WIP
+naming convention.  This can be saved and loaded for alter use.  Ideally each
+fault should have a preset direction.  This can be done by `.set_directions
+()` which expects a mapping between the original Leapfrog Fault name
+(from .csv) and their directions.
+
+Now the object can workout any rocktype's fault direction by working through the
+faults exists ina particular rocktype.  If all faults going through a rocktype
+are with the same direction, that direction is used.  Otherwise it returns
+None.  The `FaultRocktypes` object can keep user specified directions.
+
+```python
+
+# sets single fault directions
+gmf_fault.set_directions({
+    "F1": 1,
+    "F2": 1,
+    "F3": 1,
+    "F4": 2,
+})
+
+print(gmf_fault.rocktype_faults)
+
+# {
+#     "A0": ["F1"],
+#     "AB": ["F1", "F2"],
+#     "AX": ["F1", "F2", "F3"],
+#     "AY": ["F1", "F2", "F4"],
+#     "D0": ["F4"],
+#     ...
+# }
+
+print(gmf_fault.direction['A0']) # 1
+print(gmf_fault.direction['AX']) # 1, because all faults uses 1
+print(gmf_fault.direction['D0']) # 2
+print(gmf_fault.direction['AY']) # None
+
+gmf_fault['AY'] = 1 # user decides that this fault combo should be 1 anyways
+
+print(gmf_fault.direction['AY']) # 1
+
+```
+For example, finding out what a certain rocktype ...WIP
 
 
 # Example
