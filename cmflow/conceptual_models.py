@@ -607,8 +607,6 @@ class LeapfrogGM(object):
             if rocktype_name in rocktype_index:
                 raise Exception(f"Rocktype Name should be unique, {rocktype_name} repeated")
             rocktype_index[rocktype_name] = faults
-        # sort the dict for nicer output
-        rocktype_index = dict(sorted(rocktype_index.items()))
 
         # create FaultRocktypes object to return
         fault_rocktypes = FaultRocktypes(self.lf_faults)
