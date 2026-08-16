@@ -172,7 +172,7 @@ class FaultRocktypes:
     .set_directions() expects a dict mapping fault leapfrog names to int direction (or None)
     .set_display_names() expects a dict mapping fault leapfrog names to display/full names
     """
-    def __init__(self, leapfrog_names):
+    def __init__(self, leapfrog_names=[]):
         # initialise with a list of fault full names (as in)
         self.lf_faults = leapfrog_names
 
@@ -659,7 +659,7 @@ class LeapfrogGM(object):
             rocktype_index[rocktype_name] = faults
 
         # create FaultRocktypes object to return
-        fault_rocktypes = FaultRocktypes(self.lf_faults)
+        fault_rocktypes = FaultRocktypes(leapfrog_names=self.lf_faults)
         fault_rocktypes.set_rocktypes(rocktype_index)
 
         return fault_rocktypes
