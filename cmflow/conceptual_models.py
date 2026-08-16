@@ -444,7 +444,7 @@ class LeapfrogGM(object):
         if chars is None:
             chars = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:]
         else:
-            chars.replace('0', '')
+            chars = chars.replace('0', '')
 
         default_ignore = [None, 'Water', 'Unknown', 'Outside Geological Model']
         if ignore is None:
@@ -521,7 +521,7 @@ class LeapfrogGM(object):
         if chars is None:
             chars = string.ascii_uppercase + string.ascii_lowercase + string.digits[1:]
         else:
-            chars.replace('0', '')
+            chars = chars.replace('0', '')
 
         if fault_codes:
             # some checks and remove used characters
