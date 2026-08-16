@@ -561,6 +561,18 @@ class LeapfrogGM(object):
         # sort by combo length, then by rank sequentially in combo
         combinations = sorted(combinations, key=lambda x: (len(x), tuple(fault_rank[y] for y in x)))
 
+        if report:
+            print("\n".join([
+                f"Generating GMF fault names:",
+                f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
+                f"{len(self.lf_faults):>8} Faults found",
+                f"{len(combinations):>8} Total unique fault combinations found",
+                f"{len([c for c in combinations if len(c)==1]):>8} Single-fault combinations found",
+                f"{len([c for c in combinations if len(c)==2]):>8} Fault intersections found with 2 faults",
+                f"{len([c for c in combinations if len(c)>=3]):>8} Fault intersections found with 3 or more faults",
+                f"{max([len(c) for c in combinations]):>8} Maximum number of fault intersect in one block",
+                ]) + "\n")
+
         final_codes = {}
         for ii,fid in enumerate(combinations):
             if len(fid) == 0:
@@ -601,18 +613,6 @@ class LeapfrogGM(object):
         # create FaultRocktypes object to return
         fault_rocktypes = FaultRocktypes(self.lf_faults)
         fault_rocktypes.set_rocktypes(rocktype_index)
-
-        if report:
-            print("\n".join([
-                f"Generating GMF fault names:",
-                f"{len(self.lf_lithos):>8} Leapfrog LithoCode",
-                f"{len(self.lf_faults):>8} Faults found",
-                f"{len(final_codes):>8} Total unique fault combinations found",
-                f"{len([fid for fid in final_codes.keys() if len(fid)==1]):>8} Single-fault combinations found",
-                f"{len([fid for fid in final_codes.keys() if len(fid)==2]):>8} Fault intersections found with 2 faults",
-                f"{len([fid for fid in final_codes.keys() if len(fid)>=3]):>8} Fault intersections found with 3 or more faults",
-                f"{max([len(fid) for fid in final_codes.keys()]):>8} Maximum number of fault intersect in one block",
-                ]) + "\n")
 
         return fault_rocktypes
 
