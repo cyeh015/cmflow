@@ -531,6 +531,7 @@ class LeapfrogGM(object):
 
         if fault_codes:
             # some checks and remove used characters
+            used = []
             for f,c in fault_codes.items():
                 if c == '0':
                     raise Exception(f"Fault code for {f} cannot be '0'")
@@ -539,6 +540,9 @@ class LeapfrogGM(object):
                 if f not in fault_codes:
                     raise Exception(f"Fault {f} not found in Leapfrog faults list")
                 chars = chars.replace(c, '')
+                if c in used:
+                    raise Exception(f"Fault code '{c}' for {f} is already used")
+                used.append(c)
             # tolerate if user only specifies some of the faults
             remaining_lf_faults = [f for f in self.lf_faults if f not in fault_codes]
             new_fault_codes, chars = assign_chars(sorted(remaining_lf_faults, key=natural_key), chars=chars)
