@@ -81,25 +81,26 @@ gmf_fault.set_directions({
 print(gmf_fault.rocktype_faults)
 
 # {
-#     "A0": ["F1"],
-#     "AB": ["F1", "F2"],
-#     "AX": ["F1", "F2", "F3"],
-#     "AY": ["F1", "F2", "F4"],
-#     "D0": ["F4"],
+#     "A0": ("F1"),
+#     "AB": ("F1", "F2"),
+#     "AX": ("F1", "F2", "F3"),
+#     "AY": ("F1", "F2", "F4"),
+#     "D0": ("F4"),
 #     ...
 # }
 
-print(gmf_fault.direction['A0']) # 1
-print(gmf_fault.direction['AX']) # 1, because all faults uses 1
-print(gmf_fault.direction['D0']) # 2
-print(gmf_fault.direction['AY']) # None
+print(gmf_fault['AB'].faults)    # ('F1', 'F2')
 
-gmf_fault['AY'] = 1 # user decides that this fault combo should be 1 anyways
+print(gmf_fault['A0'].direction) # 1
+print(gmf_fault['AX'].direction) # 1, because all faults uses 1
+print(gmf_fault['D0'].direction) # 2
+print(gmf_fault['AY'].direction) # None
 
-print(gmf_fault.direction['AY']) # 1
+gmf_fault.set_rock_fault_dir('AY', 1) # user decides that this fault combo should be 1 anyways
+
+print(gmf_fault['AY'].direction) # 1
 
 ```
-For example, finding out what a certain rocktype ...WIP
 
 
 # Example

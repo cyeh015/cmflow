@@ -12,6 +12,7 @@ from cmflow.geom_3dface_utils import Face3D
 from cmflow.geom_surface_utils import get_columns_intersect_polygon
 from cmflow.geom_surface_utils import geo_column_polygon
 
+from dataclasses import dataclass
 import json
 import time
 import string
@@ -114,7 +115,7 @@ class MethodProxy:
             obj.rock['AB'] = 4
             print(obj.rock['AB'])
     """
-    def __init__(self, getter_method, setter_method=None):
+    def __init__(self, getter_method, setter_method=None,):
         self._getter = getter_method
         self._setter = setter_method
 
@@ -127,6 +128,11 @@ class MethodProxy:
             raise TypeError("This property is read-only")
         self._setter(key, value)
 
+@dataclass
+class FaultRocktype:
+    name: str
+    faults: tuple[str, ...] = () # tuple of zero or more Leapfrog fault names
+    direction: int | None = None  # 1 or 2 or None
 
 class FaultRocktypes:
     """ obj that keeps fault info of created rocktypes (usually 2 chars in GMF)
@@ -154,40 +160,79 @@ class FaultRocktypes:
         # specific rocktype direction
         self.user_rocktype_dir = {} # user overwrite fault dir for combos
 
+    def __getitem__(self, rocktype_name):
+        """ convenience function to get a FaultRocktype object by rocktype name
+
+        Use:
+            a_faultrocktype['AB'].faults
+            a_faultrocktype['AB'].directions
+
+        """
+        if rocktype_name not in self.rocktype_faults:
+            raise KeyError(f"Rocktype {rocktype_name} not found in FaultRocktypes.")
+        return FaultRocktype(
+            name=rocktype_name,
+            faults=self.rocktype_faults[rocktype_name],
+            direction=self.get_rock_fault_dir(rocktype_name)
+        )
+
+    @property
+    def faults(self):
+        """ a list of leapfrog fault names """
+        return self.lf_faults
+
+    @property
+    def rocktypes(self):
+        """ a list rocktype names """
+        return list(self.rocktype_faults.keys())
+
+    @property
+    def fault_direction(self):
+        """ a dict of all leapfrog faults and their direction """
+        return self.fault_dir
+
     def set_display_names(self, display_name):
         """ display_name is a dict mapping leapfrog names to display/full names
         """
         self.display_name = display_name
 
     def set_rocktypes(self, rock_table):
-        """ rock_table is dict mapping rocktype code to tuple of leapfrog names
+        """ rock_table is dict mapping rocktype code to tuple of leapfrog fault names
 
-        This is usually constructed using something like .gmf_fault_rocktype_2L()
+        This is usually constructed within something like .gmf_fault_rocktype_2L()
         from LeapfrogGM object.
         """
         self.rocktype_faults = rock_table
 
     def set_directions(self, fault_dir):
         """ fault_dir is a dict mapping leapfrog names to int direction (or None)
+
+        Usually user should setup these manually.
         """
+        for r,d in fault_dir.items():
+            if r not in self.lf_faults:
+                raise Exception(f"Fault {r} not found in FaultRocktypes.")
+            if d not in [1,2]:
+                raise Exception(f"Fault direction {d} for {r} must be 1 or 2.")
         self.fault_dir = fault_dir
 
-    @property
-    def direction(self):
-        """ User can access direction by simply:
-            print(a_faultrocktypes.direction['AB'])  # returns the direction of rocktype 'AB'
-            a_faultrocktypes.direction['AB'] = 2 # user specify direction
-        """
-        return MethodProxy(getter_method=self.get_rock_fault_dir,
-                           setter_method=self.set_rock_fault_dir)
+    def get_rock_faults(self, rocktype_name, warn=False):
+        if not self.rocktype_faults and warn:
+            raise Exception("Fault table not set, see .set_rocktypes()")
+        return self.rocktype_faults.get(rocktype_name, None)
 
     def set_rock_fault_dir(self, rocktype_name, direction):
+        """ update the direction of a rocktype
+
+        NOTE this is different from setting Leapfrog faults directions, see:
+             .set_directions()
+        """
         if rocktype_name not in self.rocktype_faults:
             raise Exception(f"Rocktype {rocktype_name} not found in FaultRocktypes.")
         self.user_rocktype_dir[rocktype_name] = direction
 
     def get_rock_fault_dir(self, rocktype_name, warn=False):
-        """ return the rocktype fault direction
+        """ return the rocktype fault direction (computed)
 
         Working out direction if not overwritten with self.user_rocktype_dir:
           if single fault -> fault dir
