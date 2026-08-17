@@ -28,6 +28,50 @@ def print_wall_time(msg, loop_stop=False, total=False):
     if loop_stop:
         START.append(t)
 
+DISCRETE_COLORS = [
+        [
+            "#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+            "#ffd92f", "#e5c494", "#b3b3b3"
+        ],
+        [
+            "#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3",
+            "#fdb462", "#b3de69", "#fccde5", "#d9d9d9", "#bc80bd",
+            "#ccebc5", "#ffed6f"
+        ],
+        [
+            "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c",
+            "#98df8a", "#d62728", "#ff9896", "#9467bd", "#c5b0d5",
+            "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f",
+            "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5"
+        ],
+        [
+            "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#e6550d",
+            "#fd8d3c", "#fdae6b", "#fdd0a2", "#31a354", "#74c476",
+            "#a1d99b", "#c7e9c0", "#756bb1", "#9e9ac8", "#bcbddc",
+            "#dadaeb", "#636363", "#969696", "#bdbdbd", "#d9d9d9",
+            "#393b79", "#5254a3", "#6b6ecf", "#9c9ede", "#637939",
+            "#8ca252", "#b5cf6b", "#cedb9c", "#8c6d31", "#bd9e39",
+            "#e7ba52", "#e7cb94", "#843c39", "#ad494a", "#d6616b",
+            "#e7969c", "#7b4173", "#a55194", "#ce6dbd", "#de9ed6"
+        ],
+    ]
+
+def default_discrete_colors(size_hint):
+    """ Returns a list of colors for plotting, based on the size_hint.
+
+    These are extrtacted from matplotlib's colormaps:
+        Set2, Set3, tab20, tab20c + tab20b
+    """
+    if size_hint < 1:
+        raise ValueError("size_hint must be positive")
+    colors = []
+    while len(colors) < size_hint:
+        for palette in DISCRETE_COLORS:
+            colors = palette
+            if len(colors) >= size_hint:
+                break
+    return colors[:size_hint]
+
 def assign_chars(names, chars=string.ascii_uppercase):
     """ Assign unique characters to each name.
 
@@ -337,13 +381,25 @@ class FaultRocktypes:
                     "display_names": self.display_name,
                     "rocktype_faults": self.rocktype_faults,
                     "fault_dir": self.fault_dir,
+                    "overwrite_rocktype_dir": self.user_rocktype_dir,
                 },
                 # framework needs extras
                 "legend": {rt: ", ".join(fs) for rt, fs in self.rocktype_faults.items()},
-                "color": {rt: None for rt, fs in self.rocktype_faults.items() if len(fs)==1},
+                "color": {f: c for f, c in zip(self.lf_faults,
+                    default_discrete_colors(len(self.lf_faults)))},
             },
         }
         return gmf_fault
+
+    def import_gmf_convention(self, jsondata):
+        if isinstance(jsondata, str):
+            with open(jsondata, 'r') as f:
+                jsondata = json.load(f)
+        self.lf_faults = jsondata['faults']['data']['leapfrog_names']
+        self.display_name = jsondata['faults']['data']['display_names']
+        self.rocktype_faults = jsondata['faults']['data']['rocktype_faults']
+        self.fault_dir = jsondata['faults']['data']['fault_dir']
+        self.user_rocktype_dir = jsondata['faults']['data']['overwrite_rocktype_dir']
 
 
 class LeapfrogGM(object):
